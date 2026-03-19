@@ -1,0 +1,12 @@
+node_modules/
+.env
+.env.local
+.env.development
+.env.test
+.env.production
+dist/
+out/
+.next/
+build/
+coverage/
+.DS_Store
