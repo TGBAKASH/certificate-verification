@@ -16,6 +16,14 @@ app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
 app.use('/api', certRoutes);
 
+// Strip trailing slashes silently to handle browser-cached 301 redirects to folders
+app.use((req, res, next) => {
+  if (req.method === 'GET' && req.path.length > 1 && req.path.endsWith('/')) {
+    req.url = req.url.slice(0, req.path.length - 1) + req.url.slice(req.path.length);
+  }
+  next();
+});
+
 // Serve Next.js frontend statically with html extension resolving
 app.use(express.static(path.join(__dirname, '../../frontend/out'), { 
   extensions: ['html'],
