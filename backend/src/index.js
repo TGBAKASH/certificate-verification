@@ -16,19 +16,26 @@ app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
 app.use('/api', certRoutes);
 
-// Strip trailing slashes silently to handle browser-cached 301 redirects to folders
+const fs = require('fs');
+
+// Explicitly serve Next.js HTML files to bypass express.static directory conflicts
 app.use((req, res, next) => {
-  if (req.method === 'GET' && req.path.length > 1 && req.path.endsWith('/')) {
-    req.url = req.url.slice(0, req.path.length - 1) + req.url.slice(req.path.length);
+  if (req.method === 'GET' && !req.path.startsWith('/api')) {
+    let reqPath = req.path;
+    if (reqPath.length > 1 && reqPath.endsWith('/')) {
+      reqPath = reqPath.slice(0, -1);
+    }
+    
+    const htmlPath = path.join(__dirname, '../../frontend/out', reqPath + '.html');
+    if (fs.existsSync(htmlPath)) {
+      return res.sendFile(htmlPath);
+    }
   }
   next();
 });
 
-// Serve Next.js frontend statically with html extension resolving
-app.use(express.static(path.join(__dirname, '../../frontend/out'), { 
-  extensions: ['html'],
-  redirect: false
-}));
+// Serve Next.js frontend static assets
+app.use(express.static(path.join(__dirname, '../../frontend/out')));
 
 // Catch-all route to serve 404
 app.use((req, res) => {
