@@ -17,7 +17,10 @@ app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 app.use('/api', certRoutes);
 
 // Serve Next.js frontend statically with html extension resolving
-app.use(express.static(path.join(__dirname, '../../frontend/out'), { extensions: ['html'] }));
+app.use(express.static(path.join(__dirname, '../../frontend/out'), { 
+  extensions: ['html'],
+  redirect: false
+}));
 
 // Catch-all route to serve 404
 app.use((req, res) => {
