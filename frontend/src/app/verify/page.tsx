@@ -1,13 +1,13 @@
 "use client";
-import { useEffect, useState } from "react";
-import { useParams } from "next/navigation";
+import { useEffect, useState, Suspense } from "react";
+import { useSearchParams } from "next/navigation";
 import axios from "axios";
 import Link from "next/link";
 import QRCode from "react-qr-code";
 
-export default function VerifyCertificate() {
-  const params = useParams();
-  const certId = params.id as string;
+function VerifyCertificateContent() {
+  const searchParams = useSearchParams();
+  const certId = searchParams.get("id") as string;
   
   const [certData, setCertData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -230,5 +230,13 @@ export default function VerifyCertificate() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function VerifyCertificate() {
+  return (
+    <Suspense fallback={<div className="flex justify-center items-center h-[60vh]"><p className="text-slate-500 font-medium">Loading...</p></div>}>
+      <VerifyCertificateContent />
+    </Suspense>
   );
 }

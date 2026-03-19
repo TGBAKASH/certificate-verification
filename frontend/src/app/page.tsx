@@ -9,7 +9,7 @@ export default function Home() {
   const handleVerify = (e: React.FormEvent) => {
     e.preventDefault();
     if (certId) {
-      router.push(`/verify/${certId}`);
+      router.push(`/verify?id=${certId}`);
     }
   };
 

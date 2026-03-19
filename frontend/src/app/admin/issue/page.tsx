@@ -73,7 +73,7 @@ export default function IssueCertificate() {
 
       await axios.post(`${API_URL}/issue-certificate`, metadata);
 
-      setIssuedCert({ ...metadata, verifyUrl: `${window.location.origin}/verify/${certId}` });
+      setIssuedCert({ ...metadata, verifyUrl: `${window.location.origin}/verify?id=${certId}` });
       setStatusMsg("Certificate issued successfully!");
     } catch (err: any) {
       console.error(err);
@@ -139,7 +139,7 @@ export default function IssueCertificate() {
                <div className="p-4 bg-white border border-slate-200 rounded-xl shadow-sm">
                  <QRCode value={issuedCert.verifyUrl} size={150} />
                </div>
-               <Link href={`/verify/${issuedCert.certificateId}`} className="text-sm text-blue-600 font-medium hover:underline">
+               <Link href={`/verify?id=${issuedCert.certificateId}`} className="text-sm text-blue-600 font-medium hover:underline">
                  View Verification Page
                </Link>
             </div>
