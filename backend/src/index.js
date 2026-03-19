@@ -16,15 +16,15 @@ app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
 app.use('/api', certRoutes);
 
-// Serve Next.js frontend statically
-app.use(express.static(path.join(__dirname, '../../frontend/out')));
+// Serve Next.js frontend statically with html extension resolving
+app.use(express.static(path.join(__dirname, '../../frontend/out'), { extensions: ['html'] }));
 
-// Catch-all route to serve React app
+// Catch-all route to serve 404
 app.use((req, res) => {
   if (req.path.startsWith('/api')) {
     return res.status(404).json({ message: 'API Route Not Found' });
   }
-  res.sendFile(path.join(__dirname, '../../frontend/out/index.html'));
+  res.status(404).sendFile(path.join(__dirname, '../../frontend/out/404.html'));
 });
 mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/certificate_verification', {
   // options not needed in Mongoose 6+
