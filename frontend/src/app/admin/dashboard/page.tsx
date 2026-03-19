@@ -14,6 +14,8 @@ export default function AdminDashboard() {
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [sort, setSort] = useState<'desc' | 'asc'>('desc');
+  const [search, setSearch] = useState('');
+  const [searchInput, setSearchInput] = useState('');
 
   useEffect(() => {
     if (account === null) {
@@ -26,14 +28,14 @@ export default function AdminDashboard() {
     } else {
       fetchHistory();
     }
-  }, [account, router, page, sort]);
+  }, [account, router, page, sort, search]);
 
   const fetchHistory = async () => {
     if (!account) return;
     setLoading(true);
     try {
       const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api";
-      const res = await axios.get(`${API_URL}/history/${account}?page=${page}&limit=10&sort=${sort}`);
+      const res = await axios.get(`${API_URL}/history/${account}?page=${page}&limit=10&sort=${sort}&search=${encodeURIComponent(search)}`);
       setHistory(res.data.certificates);
       setTotalPages(res.data.totalPages || 1);
     } catch (err) {
@@ -67,16 +69,30 @@ export default function AdminDashboard() {
       <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 min-h-[50vh]">
         <div className="flex justify-between items-center mb-6 border-b border-slate-100 pb-4">
            <h2 className="text-lg font-bold text-slate-900">Issuance History</h2>
-           <div className="flex items-center space-x-2">
-             <label className="text-sm text-slate-600 font-medium">Sort by Date:</label>
-             <select 
-               value={sort} 
-               onChange={(e) => setSort(e.target.value as 'asc' | 'desc')}
-               className="text-sm border border-slate-200 rounded p-1.5 focus:outline-none focus:ring-1 focus:ring-blue-500"
-             >
-               <option value="desc">Newest First</option>
-               <option value="asc">Oldest First</option>
-             </select>
+           <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
+             {/* Search Bar */}
+             <form onSubmit={(e) => { e.preventDefault(); setSearch(searchInput); setPage(1); }} className="flex">
+               <input
+                 type="text"
+                 value={searchInput}
+                 onChange={(e) => { setSearchInput(e.target.value); if (e.target.value === '') { setSearch(''); setPage(1); } }}
+                 placeholder="Search by name, ID, course..."
+                 className="text-sm border border-slate-200 rounded-l px-3 py-1.5 focus:outline-none focus:ring-1 focus:ring-blue-500 w-48"
+               />
+               <button type="submit" className="bg-slate-900 text-white text-sm px-3 py-1.5 rounded-r hover:bg-slate-700 transition-colors">Search</button>
+             </form>
+             {/* Sort Dropdown */}
+             <div className="flex items-center space-x-2">
+               <label className="text-sm text-slate-600 font-medium">Sort:</label>
+               <select 
+                 value={sort} 
+                 onChange={(e) => setSort(e.target.value as 'asc' | 'desc')}
+                 className="text-sm border border-slate-200 rounded p-1.5 focus:outline-none focus:ring-1 focus:ring-blue-500"
+               >
+                 <option value="desc">Newest First</option>
+                 <option value="asc">Oldest First</option>
+               </select>
+             </div>
            </div>
         </div>
 

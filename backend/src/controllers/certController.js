@@ -86,16 +86,27 @@ exports.getHistory = async (req, res) => {
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
     const skip = (page - 1) * limit;
-    
-    // Sort option: -1 is descending (newest first), 1 is ascending
     const sort = req.query.sort === 'asc' ? 1 : -1;
+    const search = req.query.search || '';
 
-    const query = issuerWallet.toLowerCase() === 'all' 
+    const baseQuery = issuerWallet.toLowerCase() === 'all' 
       ? {} 
       : { issuerWallet: { $regex: new RegExp(`^${issuerWallet}$`, "i") } };
 
-    const total = await Certificate.countDocuments(query);
-    const certificates = await Certificate.find(query)
+    const searchQuery = search 
+      ? {
+          ...baseQuery,
+          $or: [
+            { studentName: { $regex: search, $options: 'i' } },
+            { studentId: { $regex: search, $options: 'i' } },
+            { course: { $regex: search, $options: 'i' } },
+            { certificateId: { $regex: search, $options: 'i' } }
+          ]
+        }
+      : baseQuery;
+
+    const total = await Certificate.countDocuments(searchQuery);
+    const certificates = await Certificate.find(searchQuery)
       .sort({ issueDate: sort })
       .skip(skip)
       .limit(limit);
@@ -124,17 +135,17 @@ exports.verifyCertificate = async (req, res) => {
     // 2. If a file is uploaded during verification, check if it matches the hash exactly
     if (req.file) {
       calculatedHash = generateHash(req.file.path);
-      fs.unlinkSync(req.file.path); // remove uploaded file after hashing
+      fs.unlinkSync(req.file.path);
       
       if (calculatedHash !== certDB.blockchainHash) {
-         return res.json({ valid: false, message: 'Document has been altered. Hash does not match records.' });
+         return res.json({ valid: false, message: 'Document has been altered or tampered with. The cryptographic hash does not match the blockchain record.' });
       }
     }
 
-    // 3. Verify on Blockchain (Fixes localhost 8545 ECONNREFUSED crash)
-    const rpcUrl = process.env.SEPOLIA_RPC_URL || process.env.RPC_URL || 'https://ethereum-sepolia-rpc.publicnode.com';
+    // 3. Verify on Blockchain using Sepolia RPC (public node fallback)
+    const rpcUrl = process.env.SEPOLIA_RPC_URL || 'https://ethereum-sepolia-rpc.publicnode.com';
     const provider = new ethers.JsonRpcProvider(rpcUrl);
-    if (!contractData.address) return res.status(500).json({ error: "Missing contract address" });
+    if (!contractData.address) return res.status(500).json({ error: "Smart contract not deployed. Missing contract address in artifacts." });
     
     const contract = new ethers.Contract(contractData.address, contractData.abi, provider);
     
@@ -142,7 +153,7 @@ exports.verifyCertificate = async (req, res) => {
     const [onchainHash, onchainIssuer, onchainTimestamp] = await contract.verifyCertificate(certificateId);
 
     if (onchainHash !== calculatedHash) {
-      return res.json({ valid: false, message: 'INVALID CERTIFICATE: Hash mismatch on blockchain' });
+      return res.json({ valid: false, message: 'Hash mismatch — certificate record on blockchain does not match.' });
     }
 
     res.json({
@@ -151,7 +162,7 @@ exports.verifyCertificate = async (req, res) => {
       data: {
         studentName: certDB.studentName,
         course: certDB.course,
-        issuerWalet: onchainIssuer,
+        issuerWallet: onchainIssuer,
         issueDate: certDB.issueDate,
         transactionHash: certDB.transactionHash,
         onchainTimestamp: onchainTimestamp.toString()
@@ -160,8 +171,9 @@ exports.verifyCertificate = async (req, res) => {
 
   } catch (err) {
     if (err.message && err.message.includes("Certificate not found")) {
-      return res.json({ valid: false, message: 'Certificate not found on Blockchain' });
+      return res.json({ valid: false, message: 'Certificate ID was not found on the Ethereum blockchain. It may have been issued on a different network.' });
     }
+    console.error("Verify error:", err);
     res.status(500).json({ error: err.message });
   }
 };
