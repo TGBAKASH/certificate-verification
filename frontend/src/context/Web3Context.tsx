@@ -55,6 +55,17 @@ export const Web3Provider = ({ children }: { children: React.ReactNode }) => {
     }
     setIsConnecting(true);
     try {
+      // Prompt user to switch to Sepolia testnet (Chain ID: 11155111 or 0xaa36a7)
+      const SEPOLIA_CHAIN_ID = "0xaa36a7";
+      try {
+        await window.ethereum.request({
+          method: "wallet_switchEthereumChain",
+          params: [{ chainId: SEPOLIA_CHAIN_ID }],
+        });
+      } catch (switchError: any) {
+        console.warn("Wallet switch failed or Sepolia not added:", switchError);
+      }
+
       const browserProvider = new ethers.BrowserProvider(window.ethereum);
       const accounts = await browserProvider.send("eth_requestAccounts", []);
       const jsonSigner = await browserProvider.getSigner();
