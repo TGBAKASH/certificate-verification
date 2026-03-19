@@ -20,7 +20,7 @@ app.use('/api', certRoutes);
 app.use(express.static(path.join(__dirname, '../../frontend/out')));
 
 // Catch-all route to serve React app
-app.get('*', (req, res) => {
+app.use((req, res) => {
   if (req.path.startsWith('/api')) {
     return res.status(404).json({ message: 'API Route Not Found' });
   }
