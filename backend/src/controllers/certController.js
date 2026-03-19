@@ -80,6 +80,37 @@ exports.getCertificate = async (req, res) => {
   }
 };
 
+exports.getHistory = async (req, res) => {
+  try {
+    const { issuerWallet } = req.params;
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const skip = (page - 1) * limit;
+    
+    // Sort option: -1 is descending (newest first), 1 is ascending
+    const sort = req.query.sort === 'asc' ? 1 : -1;
+
+    const query = issuerWallet.toLowerCase() === 'all' 
+      ? {} 
+      : { issuerWallet: { $regex: new RegExp(`^${issuerWallet}$`, "i") } };
+
+    const total = await Certificate.countDocuments(query);
+    const certificates = await Certificate.find(query)
+      .sort({ issueDate: sort })
+      .skip(skip)
+      .limit(limit);
+
+    res.json({
+      certificates,
+      totalPages: Math.ceil(total / limit),
+      currentPage: page,
+      totalCount: total
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
 exports.verifyCertificate = async (req, res) => {
   try {
     const { certificateId } = req.body;
@@ -100,8 +131,9 @@ exports.verifyCertificate = async (req, res) => {
       }
     }
 
-    // 3. Verify on Blockchain
-    const provider = new ethers.JsonRpcProvider(process.env.RPC_URL || 'http://127.0.0.1:8545');
+    // 3. Verify on Blockchain (Fixes localhost 8545 ECONNREFUSED crash)
+    const rpcUrl = process.env.SEPOLIA_RPC_URL || process.env.RPC_URL || 'https://ethereum-sepolia-rpc.publicnode.com';
+    const provider = new ethers.JsonRpcProvider(rpcUrl);
     if (!contractData.address) return res.status(500).json({ error: "Missing contract address" });
     
     const contract = new ethers.Contract(contractData.address, contractData.abi, provider);
