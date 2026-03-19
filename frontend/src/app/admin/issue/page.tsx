@@ -12,72 +12,55 @@ export default function IssueCertificate() {
   const { account, signer } = useWeb3();
   const router = useRouter();
 
-  const [formData, setFormData] = useState({
-    studentName: "",
-    studentId: "",
-    course: "",
-  });
+  const [formData, setFormData] = useState({ studentName: "", studentId: "", course: "" });
   const [file, setFile] = useState<File | null>(null);
   const [loading, setLoading] = useState(false);
   const [statusMsg, setStatusMsg] = useState("");
+  const [isError, setIsError] = useState(false);
   const [issuedCert, setIssuedCert] = useState<any>(null);
 
   const handleIssue = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!account || !signer) {
-      alert("Please connect MetaMask account");
-      return;
-    }
-    if (!file) {
-      alert("Please upload a certificate PDF");
-      return;
-    }
+    if (!account || !signer) { alert("Please connect MetaMask account"); return; }
+    if (!file) { alert("Please upload a certificate PDF"); return; }
 
     setLoading(true);
+    setIsError(false);
     setStatusMsg("Uploading document and generating hash...");
 
     try {
-      // 1. Upload to backend to get the hash and path
       const uploadData = new FormData();
       uploadData.append("document", file);
-
       const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api";
-
       const uploadRes = await axios.post(`${API_URL}/upload`, uploadData);
       const docHash = uploadRes.data.hash;
       const filePath = uploadRes.data.filePath;
 
-      // 2. Setup Smart Contract tx
       setStatusMsg("Waiting for blockchain confirmation... Please approve the MetaMask transaction.");
-      const contractAddress = certArtifact.address;
-      const contract = new ethers.Contract(contractAddress, certArtifact.abi, signer);
-
+      const contract = new ethers.Contract(certArtifact.address, certArtifact.abi, signer);
       const certId = `CERT-${Date.now()}-${Math.floor(Math.random() * 10000)}`;
-
       const tx = await contract.issueCertificate(certId, docHash);
       setStatusMsg("Transaction submitted. Waiting for mining...");
       const receipt = await tx.wait();
 
-      // 3. Save to backend database
       setStatusMsg("Saving records to database...");
       const metadata = {
         certificateId: certId,
         studentName: formData.studentName,
         studentId: formData.studentId,
         course: formData.course,
-        filePath: filePath,
+        filePath,
         blockchainHash: docHash,
         issuerWallet: account,
         transactionHash: receipt.hash
       };
 
       await axios.post(`${API_URL}/issue-certificate`, metadata);
-
       setIssuedCert({ ...metadata, verifyUrl: `${window.location.origin}/verify?id=${certId}` });
       setStatusMsg("Certificate issued successfully!");
     } catch (err: any) {
-      console.error(err);
-      setStatusMsg(`Error: ${err.response?.data?.error || err.message}`);
+      setIsError(true);
+      setStatusMsg(err.response?.data?.error || err.message);
     } finally {
       setLoading(false);
     }
@@ -85,100 +68,139 @@ export default function IssueCertificate() {
 
   if (!account) {
     return (
-      <div className="text-center mt-20">
-        <h2 className="text-2xl font-bold">Unauthorized</h2>
-        <p className="mt-2 text-slate-500">Please login to access this page.</p>
-        <Link href="/admin/login" className="text-blue-600 hover:underline mt-4 inline-block">Go to Login</Link>
+      <div className="min-h-[60vh] flex flex-col items-center justify-center text-center">
+        <div className="text-5xl mb-4">🔒</div>
+        <h2 className="text-2xl font-bold text-white mb-2">Unauthorized</h2>
+        <p className="text-slate-400 mb-6">Please connect your wallet to access this page.</p>
+        <Link href="/admin/login" className="btn-primary px-6 py-3 rounded-xl text-sm">Go to Login</Link>
       </div>
     );
   }
 
   return (
-    <div className="max-w-4xl mx-auto py-8">
-      <div className="mb-6 flex items-center justify-between">
-         <h1 className="text-3xl font-bold text-slate-900">Issue New Certificate</h1>
-         <Link href="/admin/dashboard" className="text-slate-500 hover:text-slate-900 underline text-sm">
-           &larr; Back to Dashboard
-         </Link>
+    <div className="max-w-3xl mx-auto">
+      {/* Header */}
+      <div className="flex items-center justify-between mb-8">
+        <div>
+          <h1 className="text-3xl font-bold text-white">Issue New Certificate</h1>
+          <p className="text-slate-500 text-sm mt-1">Anchor a digital certificate permanently to the Ethereum blockchain</p>
+        </div>
+        <Link href="/admin/dashboard" className="text-sm text-slate-400 hover:text-white border border-white/10 hover:bg-white/5 px-4 py-2 rounded-lg transition-all">
+          ← Dashboard
+        </Link>
       </div>
 
       {issuedCert ? (
-        <div className="bg-white p-8 rounded-2xl shadow-sm border border-green-200">
-          <div className="flex items-center space-x-3 mb-6">
-            <div className="w-10 h-10 bg-green-100 text-green-600 rounded-full flex items-center justify-center">
-              <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-              </svg>
+        /* Success State */
+        <div className="glass rounded-2xl overflow-hidden" style={{ boxShadow: 'var(--shadow-card), 0 0 60px rgba(16, 185, 129, 0.08)' }}>
+          <div className="bg-gradient-to-r from-emerald-500/10 to-green-600/10 border-b border-green-500/20 p-6">
+            <div className="flex items-center space-x-3">
+              <div className="w-10 h-10 rounded-xl bg-green-500/20 flex items-center justify-center animate-pulse-green">
+                <svg className="w-5 h-5 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
+                </svg>
+              </div>
+              <div>
+                <h2 className="text-lg font-bold text-green-400">Certificate Issued on Ethereum!</h2>
+                <p className="text-green-600 text-xs">Transaction confirmed and anchored to Sepolia testnet</p>
+              </div>
             </div>
-            <h2 className="text-2xl font-bold text-green-600">Certificate successfully issued on Ethereum!</h2>
           </div>
           
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-            <div className="space-y-4">
-               <div>
-                 <p className="text-sm text-slate-500">Certificate ID</p>
-                 <p className="font-mono bg-slate-100 p-2 rounded text-slate-700">{issuedCert.certificateId}</p>
-               </div>
-               <div>
-                 <p className="text-sm text-slate-500">Student</p>
-                 <p className="font-semibold text-lg">{issuedCert.studentName} ({issuedCert.studentId})</p>
-               </div>
-               <div>
-                 <p className="text-sm text-slate-500">Course</p>
-                 <p className="font-medium text-slate-800">{issuedCert.course}</p>
-               </div>
-               <div>
-                 <p className="text-sm text-slate-500">Transaction Hash</p>
-                 <a href={`https://sepolia.etherscan.io/tx/${issuedCert.transactionHash}`} target="_blank" rel="noreferrer" className="font-mono text-sm text-blue-600 hover:underline break-all">
-                   {issuedCert.transactionHash}
-                 </a>
-               </div>
+          <div className="p-8 grid grid-cols-1 md:grid-cols-2 gap-8">
+            <div className="space-y-5">
+              <div>
+                <p className="text-xs text-slate-500 uppercase tracking-wider mb-1">Certificate ID</p>
+                <p className="font-mono text-sm text-blue-400 bg-blue-500/10 border border-blue-500/20 px-3 py-2 rounded-lg">{issuedCert.certificateId}</p>
+              </div>
+              <div>
+                <p className="text-xs text-slate-500 uppercase tracking-wider mb-1">Student</p>
+                <p className="text-white font-semibold text-lg">{issuedCert.studentName}</p>
+                <p className="text-slate-500 text-sm">{issuedCert.studentId}</p>
+              </div>
+              <div>
+                <p className="text-xs text-slate-500 uppercase tracking-wider mb-1">Course</p>
+                <span className="text-sm bg-violet-500/10 border border-violet-500/20 text-violet-400 px-3 py-1 rounded-full">{issuedCert.course}</span>
+              </div>
+              <div>
+                <p className="text-xs text-slate-500 uppercase tracking-wider mb-1">Transaction</p>
+                <a href={`https://sepolia.etherscan.io/tx/${issuedCert.transactionHash}`} target="_blank" rel="noreferrer" className="font-mono text-xs text-blue-400 hover:text-blue-300 break-all hover:underline transition-colors">
+                  {issuedCert.transactionHash} ↗
+                </a>
+              </div>
             </div>
-            <div className="flex flex-col items-center justify-center space-y-4 border-l border-slate-100 pl-8">
-               <p className="text-sm font-medium text-slate-500 uppercase tracking-widest text-center">Scan to Verify</p>
-               <div className="p-4 bg-white border border-slate-200 rounded-xl shadow-sm">
-                 <QRCode value={issuedCert.verifyUrl} size={150} />
-               </div>
-               <Link href={`/verify?id=${issuedCert.certificateId}`} className="text-sm text-blue-600 font-medium hover:underline">
-                 View Verification Page
-               </Link>
+
+            <div className="flex flex-col items-center justify-center space-y-4 border-l border-white/5 pl-8">
+              <p className="text-xs text-slate-500 uppercase tracking-widest">Scan to Verify</p>
+              <div className="p-4 bg-white rounded-xl">
+                <QRCode value={issuedCert.verifyUrl} size={140} />
+              </div>
+              <Link href={`/verify?id=${issuedCert.certificateId}`} className="text-sm text-blue-400 hover:text-blue-300 hover:underline transition-colors">
+                View Verification Page ↗
+              </Link>
             </div>
           </div>
-          <button onClick={() => setIssuedCert(null)} className="mt-8 bg-slate-100 text-slate-700 hover:bg-slate-200 px-6 py-2 rounded-lg font-medium transition-colors">
-            Issue Another
-          </button>
+          
+          <div className="px-8 pb-8">
+            <button onClick={() => { setIssuedCert(null); setStatusMsg(""); setFormData({ studentName: "", studentId: "", course: "" }); setFile(null); }} className="text-sm text-slate-400 border border-white/10 hover:bg-white/5 hover:text-white px-5 py-2.5 rounded-xl transition-all">
+              Issue Another Certificate
+            </button>
+          </div>
         </div>
       ) : (
-        <div className="bg-white p-8 rounded-2xl shadow-sm border border-slate-100">
+        /* Form State */
+        <div className="glass rounded-2xl p-8" style={{ boxShadow: 'var(--shadow-card)' }}>
           <form onSubmit={handleIssue} className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Student Name</label>
-                <input required type="text" className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none" value={formData.studentName} onChange={e => setFormData({...formData, studentName: e.target.value})} placeholder="John Doe" />
+                <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Student Name</label>
+                <input required type="text" className="input-dark w-full px-4 py-3 rounded-xl text-sm text-slate-200"
+                  value={formData.studentName} onChange={e => setFormData({...formData, studentName: e.target.value})} placeholder="e.g. Abishek Kumar" />
               </div>
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Student ID</label>
-                <input required type="text" className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none" value={formData.studentId} onChange={e => setFormData({...formData, studentId: e.target.value})} placeholder="STU-12345" />
+                <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Student ID</label>
+                <input required type="text" className="input-dark w-full px-4 py-3 rounded-xl text-sm text-slate-200"
+                  value={formData.studentId} onChange={e => setFormData({...formData, studentId: e.target.value})} placeholder="e.g. RA2411003050262" />
               </div>
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Course / Program</label>
-              <input required type="text" className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none" value={formData.course} onChange={e => setFormData({...formData, course: e.target.value})} placeholder="B.S. in Computer Science" />
+              <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Course / Program</label>
+              <input required type="text" className="input-dark w-full px-4 py-3 rounded-xl text-sm text-slate-200"
+                value={formData.course} onChange={e => setFormData({...formData, course: e.target.value})} placeholder="e.g. B.Tech Computer Science" />
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Certificate Document (PDF)</label>
-              <input required type="file" accept="application/pdf,image/*" className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-slate-600" onChange={e => setFile(e.target.files ? e.target.files[0] : null)} />
-              <p className="text-xs text-slate-500 mt-2">The document will be hashed to ensure cryptographic authenticity.</p>
+              <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Certificate Document (PDF)</label>
+              <label className="flex items-center space-x-3 input-dark px-4 py-3 rounded-xl cursor-pointer hover:border-blue-500/50 transition-colors">
+                <svg className="w-5 h-5 text-slate-500 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                </svg>
+                <span className="text-sm text-slate-400 flex-1">{file ? file.name : "Choose PDF or Image file..."}</span>
+                <input type="file" required accept="application/pdf,image/*" className="hidden" onChange={e => setFile(e.target.files ? e.target.files[0] : null)} />
+              </label>
+              <p className="text-xs text-slate-600 mt-2">The document will be SHA-256 hashed to ensure cryptographic authenticity.</p>
             </div>
             
             {statusMsg && (
-              <div className={`p-4 rounded-lg text-sm ${statusMsg.startsWith('Error') ? 'bg-red-50 text-red-700 border border-red-200' : 'bg-blue-50 text-blue-700 border border-blue-200'}`}>
-                {statusMsg}
+              <div className={`px-4 py-3.5 rounded-xl text-sm flex items-start space-x-3 ${isError ? 'bg-red-500/10 border border-red-500/20 text-red-400' : 'bg-blue-500/10 border border-blue-500/20 text-blue-400'}`}>
+                {!isError && loading && <div className="w-4 h-4 border-2 border-blue-400/30 border-t-blue-400 rounded-full animate-spin flex-shrink-0 mt-0.5" />}
+                <span>{statusMsg}</span>
               </div>
             )}
 
-            <button type="submit" disabled={loading} className={`w-full py-3 rounded-lg font-semibold text-white transition-colors ${loading ? 'bg-blue-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700'}`}>
-              {loading ? "Processing..." : "Issue & Anchor to Blockchain"}
+            <button type="submit" disabled={loading} className={`btn-primary w-full py-4 px-6 rounded-xl text-sm flex items-center justify-center space-x-2 ${loading ? 'opacity-70 cursor-not-allowed' : ''}`}>
+              {loading ? (
+                <>
+                  <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  <span>Processing...</span>
+                </>
+              ) : (
+                <>
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                  </svg>
+                  <span>Issue & Anchor to Blockchain</span>
+                </>
+              )}
             </button>
           </form>
         </div>
