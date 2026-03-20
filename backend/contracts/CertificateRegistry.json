@@ -1,10 +1,23 @@
 {
-  "address": "0x1b5c769Be0D6e01BD37C2bBeBEFcB6C27F5405A4",
+  "address": "0xC4D379FC68E377AF801E64539af2E3d3fBdBF034",
   "abi": [
     {
       "inputs": [],
       "stateMutability": "nonpayable",
       "type": "constructor"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": false,
+          "internalType": "address",
+          "name": "newAdmin",
+          "type": "address"
+        }
+      ],
+      "name": "AdminAdded",
+      "type": "event"
     },
     {
       "anonymous": false,
@@ -38,16 +51,16 @@
       "type": "event"
     },
     {
-      "inputs": [],
-      "name": "admin",
-      "outputs": [
+      "inputs": [
         {
           "internalType": "address",
-          "name": "",
+          "name": "_newAdmin",
           "type": "address"
         }
       ],
-      "stateMutability": "view",
+      "name": "addAdmin",
+      "outputs": [],
+      "stateMutability": "nonpayable",
       "type": "function"
     },
     {
@@ -82,6 +95,25 @@
     {
       "inputs": [
         {
+          "internalType": "address",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "name": "isAdmin",
+      "outputs": [
+        {
+          "internalType": "bool",
+          "name": "",
+          "type": "bool"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
           "internalType": "string",
           "name": "_certificateId",
           "type": "string"
@@ -95,6 +127,19 @@
       "name": "issueCertificate",
       "outputs": [],
       "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "superAdmin",
+      "outputs": [
+        {
+          "internalType": "address",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "view",
       "type": "function"
     },
     {
