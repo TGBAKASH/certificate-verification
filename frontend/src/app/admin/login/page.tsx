@@ -1,17 +1,36 @@
 "use client";
 import { useWeb3 } from "@/context/Web3Context";
 import { useRouter } from "next/navigation";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 
 export default function AdminLogin() {
   const { account, connectWallet, isConnecting } = useWeb3();
   const router = useRouter();
+  const [switchingWallet, setSwitchingWallet] = useState(false);
 
   useEffect(() => {
     if (account) {
       router.push("/admin/dashboard");
     }
   }, [account, router]);
+
+  const handleSwitchWallet = async () => {
+    if (!window.ethereum) return;
+    setSwitchingWallet(true);
+    try {
+      // This shows ALL MetaMask accounts (connected and unconnected)
+      await window.ethereum.request({
+        method: "wallet_requestPermissions",
+        params: [{ eth_accounts: {} }],
+      });
+      // After selection, connect wallet normally
+      await connectWallet(false);
+    } catch (err) {
+      console.log("Wallet switch cancelled");
+    } finally {
+      setSwitchingWallet(false);
+    }
+  };
 
   return (
     <div className="min-h-[80vh] flex flex-col items-center justify-center">
@@ -40,9 +59,10 @@ export default function AdminLogin() {
           <h2 className="text-center text-lg font-semibold text-white mb-1">Connect MetaMask</h2>
           <p className="text-center text-slate-500 text-sm mb-6">Make sure you're on the Sepolia testnet</p>
 
+          {/* Primary: Connect the currently selected MetaMask wallet */}
           <button
-            onClick={() => connectWallet(true)}
-            disabled={isConnecting}
+            onClick={() => connectWallet(false)}
+            disabled={isConnecting || switchingWallet}
             className="btn-primary w-full py-4 px-6 rounded-xl text-sm flex items-center justify-center space-x-2 disabled:opacity-60 disabled:cursor-not-allowed"
           >
             {isConnecting ? (
@@ -60,12 +80,21 @@ export default function AdminLogin() {
             )}
           </button>
 
+          {/* Secondary: Switch to a different wallet */}
+          <button
+            onClick={handleSwitchWallet}
+            disabled={isConnecting || switchingWallet}
+            className="w-full mt-3 py-3 px-6 rounded-xl text-sm font-medium text-slate-400 border border-white/10 hover:bg-white/5 hover:text-white transition-all disabled:opacity-40"
+          >
+            {switchingWallet ? "Opening MetaMask..." : "🔄 Use a Different Wallet"}
+          </button>
+
           <div className="mt-6 pt-6 border-t border-white/5">
             <div className="flex items-start space-x-3">
               <div className="w-5 h-5 mt-0.5 rounded-full bg-green-500/20 flex items-center justify-center flex-shrink-0">
                 <span className="text-green-400 text-xs">✓</span>
               </div>
-              <p className="text-xs text-slate-500">Only the admin wallet that deployed the smart contract can issue certificates. Your wallet is verified on-chain.</p>
+              <p className="text-xs text-slate-500">Only authorized admin wallets can access this panel. Your wallet is verified on-chain.</p>
             </div>
           </div>
         </div>
@@ -73,3 +102,4 @@ export default function AdminLogin() {
     </div>
   );
 }
+

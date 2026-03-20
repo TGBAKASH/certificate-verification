@@ -103,27 +103,6 @@ export const Web3Provider = ({ children }: { children: React.ReactNode }) => {
     setAccount(null);
     setProvider(null);
     setSigner(null);
-
-    // Force MetaMask to show the account picker so user can switch wallets
-    if (typeof window !== "undefined" && window.ethereum) {
-      try {
-        await window.ethereum.request({
-          method: "wallet_requestPermissions",
-          params: [{ eth_accounts: {} }],
-        });
-        // After user picks a new account, connect it
-        localStorage.removeItem("walletDisconnected");
-        const browserProvider = new ethers.BrowserProvider(window.ethereum);
-        const accounts = await browserProvider.send("eth_requestAccounts", []);
-        const jsonSigner = await browserProvider.getSigner();
-        setProvider(browserProvider);
-        setSigner(jsonSigner);
-        setAccount(accounts[0]);
-      } catch (err: any) {
-        // User cancelled — stay disconnected & go to login
-        console.log("Wallet switch cancelled or failed:", err?.message);
-      }
-    }
   };
 
 
