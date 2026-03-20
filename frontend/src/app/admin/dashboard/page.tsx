@@ -4,6 +4,8 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import Link from 'next/link';
 import axios from 'axios';
+import { ethers } from "ethers";
+import certArtifact from "@/contracts/CertificateRegistry.json";
 
 export default function AdminDashboard() {
   const { account, disconnectWallet } = useWeb3();
@@ -18,6 +20,13 @@ export default function AdminDashboard() {
   const [search, setSearch] = useState('');
   const [searchInput, setSearchInput] = useState('');
 
+  // RBAC State
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [isSuperAdmin, setIsSuperAdmin] = useState(false);
+  const [newAdminAddress, setNewAdminAddress] = useState('');
+  const [addingAdmin, setAddingAdmin] = useState(false);
+  const [rbacMessage, setRbacMessage] = useState({ text: '', type: '' });
+
   useEffect(() => {
     if (account === null) {
       const timer = setTimeout(() => {
@@ -27,9 +36,49 @@ export default function AdminDashboard() {
       }, 500);
       return () => clearTimeout(timer);
     } else {
+      checkRole();
       fetchHistory();
     }
   }, [account, router, page, sort, search]);
+
+  const checkRole = async () => {
+    if (!account || !window.ethereum) return;
+    try {
+      const provider = new ethers.BrowserProvider(window.ethereum as any);
+      const contract = new ethers.Contract(certArtifact.address, certArtifact.abi, provider);
+      
+      const sAdmin = await contract.superAdmin();
+      setIsSuperAdmin(sAdmin.toLowerCase() === account.toLowerCase());
+      
+      const adminStatus = await contract.isAdmin(account);
+      setIsAdmin(adminStatus);
+    } catch (err) {
+      console.error("Failed to fetch admin role:", err);
+    }
+  };
+
+  const handleAddAdmin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!isSuperAdmin) return;
+    setAddingAdmin(true);
+    setRbacMessage({ text: 'Waiting for blockchain confirmation...', type: 'info' });
+    try {
+      const provider = new ethers.BrowserProvider(window.ethereum as any);
+      const signer = await provider.getSigner();
+      const contract = new ethers.Contract(certArtifact.address, certArtifact.abi, signer);
+      
+      const tx = await contract.addAdmin(newAdminAddress);
+      setRbacMessage({ text: 'Transaction submitted. Waiting for mining...', type: 'info' });
+      await tx.wait();
+      
+      setRbacMessage({ text: 'Admin successfully added!', type: 'success' });
+      setNewAdminAddress('');
+    } catch (err: any) {
+      setRbacMessage({ text: err.reason || err.message || 'Transaction failed', type: 'error' });
+    } finally {
+      setAddingAdmin(false);
+    }
+  };
 
   const fetchHistory = async () => {
     if (!account) return;
@@ -65,6 +114,11 @@ export default function AdminDashboard() {
           <div className="flex items-center space-x-2 mt-1">
             <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse"></span>
             <p className="text-slate-400 text-sm font-mono">{account.substring(0, 6)}...{account.substring(38)}</p>
+            {isSuperAdmin ? (
+              <span className="bg-amber-500/20 text-amber-500 border border-amber-500/30 px-2 py-0.5 rounded text-[10px] uppercase font-bold tracking-widest ml-2">Super Admin</span>
+            ) : isAdmin ? (
+              <span className="bg-blue-500/20 text-blue-400 border border-blue-500/30 px-2 py-0.5 rounded text-[10px] uppercase font-bold tracking-widest ml-2">Admin</span>
+            ) : null}
           </div>
         </div>
         <div className="flex space-x-3">
@@ -95,6 +149,43 @@ export default function AdminDashboard() {
           </div>
         ))}
       </div>
+
+      {/* Super Admin Panel */}
+      {isSuperAdmin && (
+        <div className="glass rounded-2xl p-6 border border-amber-500/20" style={{ boxShadow: '0 0 40px rgba(245,158,11,0.05)' }}>
+          <div className="flex items-center gap-3 mb-4">
+            <div className="w-8 h-8 rounded-lg bg-amber-500/10 flex items-center justify-center text-amber-500 border border-amber-500/20">
+              👑
+            </div>
+            <div>
+              <h2 className="text-base font-bold text-white">Super Admin Controls</h2>
+              <p className="text-xs text-slate-400">Authorize new wallets to issue certificates</p>
+            </div>
+          </div>
+          <form onSubmit={handleAddAdmin} className="flex flex-col sm:flex-row gap-3">
+            <input 
+              type="text" 
+              placeholder="0x..." 
+              value={newAdminAddress}
+              onChange={(e) => setNewAdminAddress(e.target.value)}
+              required
+              className="flex-1 input-dark px-4 py-2.5 rounded-xl text-sm font-mono text-slate-300"
+            />
+            <button 
+              type="submit" 
+              disabled={addingAdmin}
+              className="bg-amber-600 hover:bg-amber-500 text-white font-medium px-6 py-2.5 rounded-xl transition-colors disabled:opacity-50 text-sm whitespace-nowrap"
+            >
+              {addingAdmin ? 'Adding...' : 'Add Admin'}
+            </button>
+          </form>
+          {rbacMessage.text && (
+            <div className={`mt-3 p-3 rounded-lg text-sm border ${rbacMessage.type === 'error' ? 'bg-red-500/10 border-red-500/20 text-red-500' : rbacMessage.type === 'success' ? 'bg-green-500/10 border-green-500/20 text-green-500' : 'bg-blue-500/10 border-blue-500/20 text-blue-400'}`}>
+              {rbacMessage.text}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* History Table */}
       <div className="glass rounded-2xl overflow-hidden">

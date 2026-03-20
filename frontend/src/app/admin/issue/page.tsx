@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useWeb3 } from "@/context/Web3Context";
 import { useRouter } from "next/navigation";
 import { ethers } from "ethers";
@@ -18,6 +18,27 @@ export default function IssueCertificate() {
   const [statusMsg, setStatusMsg] = useState("");
   const [isError, setIsError] = useState(false);
   const [issuedCert, setIssuedCert] = useState<any>(null);
+  const [isAdmin, setIsAdmin] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    checkAdminRole();
+  }, [account, signer]);
+
+  const checkAdminRole = async () => {
+    if (!account || !window.ethereum) return;
+    try {
+      const provider = new ethers.BrowserProvider(window.ethereum as any);
+      const contract = new ethers.Contract(certArtifact.address, certArtifact.abi, provider);
+      
+      const sAdmin = await contract.superAdmin();
+      const adminStatus = await contract.isAdmin(account);
+      
+      setIsAdmin(sAdmin.toLowerCase() === account.toLowerCase() || adminStatus);
+    } catch (err) {
+      console.error("Role verification failed:", err);
+      setIsAdmin(false);
+    }
+  };
 
   const handleIssue = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -74,6 +95,28 @@ export default function IssueCertificate() {
         <h2 className="text-2xl font-bold text-white mb-2">Unauthorized</h2>
         <p className="text-slate-400 mb-6">Please connect your wallet to access this page.</p>
         <Link href="/admin/login" className="btn-primary px-6 py-3 rounded-xl text-sm">Go to Login</Link>
+      </div>
+    );
+  }
+
+  if (isAdmin === null) {
+    return (
+      <div className="min-h-[60vh] flex flex-col items-center justify-center text-center">
+         <div className="w-8 h-8 border-2 border-blue-500/30 border-t-blue-500 rounded-full animate-spin mb-4" />
+         <p className="text-slate-400">Verifying authorization...</p>
+      </div>
+    );
+  }
+
+  if (isAdmin === false) {
+    return (
+      <div className="min-h-[60vh] flex flex-col items-center justify-center text-center">
+        <div className="glass p-10 rounded-2xl border border-red-500/20 max-w-lg">
+          <div className="text-5xl mb-4">🚫</div>
+          <h2 className="text-2xl font-bold text-white mb-2">Access Denied</h2>
+          <p className="text-slate-400 mb-6">Your wallet address (<span className="font-mono text-xs">{account.substring(0,8)}...</span>) is not authorized to issue certificates. Please ask the Super Admin to add you.</p>
+          <Link href="/admin/dashboard" className="btn-primary px-6 py-3 rounded-xl text-sm">Return to Dashboard</Link>
+        </div>
       </div>
     );
   }

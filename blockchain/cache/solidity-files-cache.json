@@ -2,8 +2,8 @@
   "_format": "hh-sol-cache-2",
   "files": {
     "C:\\Users\\tgbak\\Certificate-verification\\blockchain\\contracts\\CertificateRegistry.sol": {
-      "lastModificationDate": 1773669916160,
-      "contentHash": "2ee95ac2795320cf46b7e0bba33805c0",
+      "lastModificationDate": 1773995233586,
+      "contentHash": "2c04f19978809063ca2ba9f97d223246",
       "sourceName": "contracts/CertificateRegistry.sol",
       "solcConfig": {
         "version": "0.8.20",

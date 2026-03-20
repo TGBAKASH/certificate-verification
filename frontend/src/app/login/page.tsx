@@ -11,6 +11,7 @@ export default function StudentLogin() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
   const [loading, setLoading] = useState(false);
   const router = useRouter();
 
@@ -21,10 +22,10 @@ export default function StudentLogin() {
 
     try {
       await signInWithEmailAndPassword(auth, email, password);
-      router.push("/dashboard");
+      setSuccess("Login successful! Redirecting...");
+      setTimeout(() => router.push("/dashboard"), 1500);
     } catch (err: any) {
       setError(err.message || "Failed to log in");
-    } finally {
       setLoading(false);
     }
   };
@@ -50,10 +51,10 @@ export default function StudentLogin() {
         // Ignore duplicate key error (11000) which means they already exist
       }
 
-      router.push("/dashboard");
+      setSuccess("Login successful! Redirecting...");
+      setTimeout(() => router.push("/dashboard"), 1500);
     } catch (err: any) {
       setError(err.message || "Failed to log in with Google");
-    } finally {
       setLoading(false);
     }
   };
@@ -66,6 +67,12 @@ export default function StudentLogin() {
         {error && (
           <div className="bg-red-500/10 border border-red-500/20 text-red-500 text-sm p-3 rounded-lg mb-4">
             {error}
+          </div>
+        )}
+
+        {success && (
+          <div className="bg-green-500/10 border border-green-500/20 text-green-500 text-sm p-3 rounded-lg mb-4 text-center font-medium">
+            {success}
           </div>
         )}
 
