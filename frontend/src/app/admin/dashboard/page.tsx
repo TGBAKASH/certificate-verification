@@ -116,6 +116,17 @@ export default function AdminDashboard() {
           <div className="text-5xl mb-4">🚫</div>
           <h2 className="text-2xl font-bold text-white mb-2">Access Denied</h2>
           <p className="text-slate-400 mb-6">Your wallet (<span className="font-mono text-xs">{account.substring(0,6)}...{account.substring(38)}</span>) is not authorized to access the Admin Dashboard.</p>
+          <div className="flex flex-col sm:flex-row justify-center items-center gap-4">
+            <button 
+              onClick={() => { disconnectWallet(); router.push('/admin/login'); }}
+              className="px-6 py-3 rounded-xl text-sm font-medium text-slate-300 border border-white/10 hover:bg-white/5 hover:text-white transition-all w-full sm:w-auto"
+            >
+              Disconnect Wallet
+            </button>
+            <Link href="/" className="px-6 py-3 rounded-xl text-sm font-medium text-blue-400 bg-blue-500/10 hover:bg-blue-500/20 transition-all w-full sm:w-auto">
+              Go Home
+            </Link>
+          </div>
         </div>
       </div>
     );
