@@ -105,6 +105,18 @@ export default function AdminDashboard() {
     </div>
   );
 
+  if (!isAdmin && !isSuperAdmin && account) {
+    return (
+      <div className="min-h-[60vh] flex flex-col items-center justify-center text-center">
+        <div className="glass p-10 rounded-2xl border border-red-500/20 max-w-lg">
+          <div className="text-5xl mb-4">🚫</div>
+          <h2 className="text-2xl font-bold text-white mb-2">Access Denied</h2>
+          <p className="text-slate-400 mb-6">Your wallet (<span className="font-mono text-xs">{account.substring(0,6)}...{account.substring(38)}</span>) is not authorized to access the Admin Dashboard.</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       {/* Header */}
