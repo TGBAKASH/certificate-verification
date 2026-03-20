@@ -24,6 +24,7 @@ export default function AdminDashboard() {
   const [isAdmin, setIsAdmin] = useState(false);
   const [isSuperAdmin, setIsSuperAdmin] = useState(false);
   const [isCheckingRole, setIsCheckingRole] = useState(true);
+  const [roleCheckFailed, setRoleCheckFailed] = useState(false);
   const [newAdminAddress, setNewAdminAddress] = useState('');
   const [addingAdmin, setAddingAdmin] = useState(false);
   const [rbacMessage, setRbacMessage] = useState({ text: '', type: '' });
@@ -45,8 +46,22 @@ export default function AdminDashboard() {
   const checkRole = async () => {
     if (!account || !window.ethereum) return;
     setIsCheckingRole(true);
+    setRoleCheckFailed(false);
     try {
+      // Force Sepolia network
+      try {
+        await window.ethereum.request({
+          method: 'wallet_switchEthereumChain',
+          params: [{ chainId: '0xaa36a7' }],
+        });
+      } catch (switchErr) {
+        console.warn('Could not switch to Sepolia:', switchErr);
+      }
       const provider = new ethers.BrowserProvider(window.ethereum as any);
+      const network = await provider.getNetwork();
+      if (Number(network.chainId) !== 11155111) {
+        throw new Error('Wrong network — please switch to Sepolia');
+      }
       const contract = new ethers.Contract(certArtifact.address, certArtifact.abi, provider);
       
       const sAdmin = await contract.superAdmin();
@@ -56,6 +71,7 @@ export default function AdminDashboard() {
       setIsAdmin(adminStatus);
     } catch (err) {
       console.error("Failed to fetch admin role:", err);
+      setRoleCheckFailed(true);
     } finally {
       setIsCheckingRole(false);
     }
@@ -108,6 +124,30 @@ export default function AdminDashboard() {
       </div>
     </div>
   );
+
+  if (roleCheckFailed) {
+    return (
+      <div className="min-h-[60vh] flex flex-col items-center justify-center text-center">
+        <div className="glass p-10 rounded-2xl border border-yellow-500/20 max-w-lg">
+          <div className="text-5xl mb-4">⚠️</div>
+          <h2 className="text-2xl font-bold text-white mb-2">Network Error</h2>
+          <p className="text-slate-400 mb-2">Could not verify your wallet role on the blockchain.</p>
+          <p className="text-slate-500 text-sm mb-6">Make sure your wallet is connected to the <strong className="text-yellow-400">Sepolia testnet</strong>.</p>
+          <div className="flex flex-col sm:flex-row justify-center items-center gap-4">
+            <button onClick={checkRole} className="btn-primary px-6 py-3 rounded-xl text-sm">
+              Retry
+            </button>
+            <button
+              onClick={() => { disconnectWallet(); router.push('/admin/login'); }}
+              className="px-6 py-3 rounded-xl text-sm font-medium text-slate-300 border border-white/10 hover:bg-white/5 hover:text-white transition-all"
+            >
+              Disconnect &amp; Reconnect
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   if (!isAdmin && !isSuperAdmin && account) {
     return (
