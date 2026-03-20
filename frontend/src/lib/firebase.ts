@@ -2,13 +2,13 @@ import { initializeApp, getApps, getApp } from "firebase/app";
 import { getAuth } from "firebase/auth";
 
 const firebaseConfig = {
-  apiKey: "AIzaSyD5eUI1ODTRUnmwJWvFN_UPu_6KlmqPV3E",
-  authDomain: "cert-verify-b858c.firebaseapp.com",
-  projectId: "cert-verify-b858c",
-  storageBucket: "cert-verify-b858c.firebasestorage.app",
-  messagingSenderId: "359655785872",
-  appId: "1:359655785872:web:19ddbaff6e695f96761f15",
-  measurementId: "G-M6ZC608Z3K"
+  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
+  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
+  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
+  storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
+  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
+  measurementId: process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID
 };
 
 // Initialize Firebase only once
