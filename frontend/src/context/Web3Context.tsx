@@ -32,7 +32,8 @@ export const Web3Provider = ({ children }: { children: React.ReactNode }) => {
     // Check if wallet is already connected
     if (typeof window !== "undefined" && window.ethereum) {
       window.ethereum.request({ method: "eth_accounts" }).then((accounts: string[]) => {
-        if (accounts.length > 0) {
+        const wasDisconnected = localStorage.getItem("walletDisconnected") === "true";
+        if (accounts.length > 0 && !wasDisconnected) {
           connectWallet();
         }
       });
@@ -89,6 +90,7 @@ export const Web3Provider = ({ children }: { children: React.ReactNode }) => {
       setProvider(browserProvider);
       setSigner(jsonSigner);
       setAccount(accounts[0]);
+      localStorage.removeItem("walletDisconnected");
     } catch (error) {
       console.error("Failed to connect wallet", error);
     } finally {
@@ -97,6 +99,7 @@ export const Web3Provider = ({ children }: { children: React.ReactNode }) => {
   };
 
   const disconnectWallet = () => {
+    localStorage.setItem("walletDisconnected", "true");
     setAccount(null);
     setProvider(null);
     setSigner(null);
