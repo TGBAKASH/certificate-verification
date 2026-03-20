@@ -6,7 +6,7 @@ interface Web3ContextType {
   account: string | null;
   provider: ethers.BrowserProvider | null;
   signer: ethers.JsonRpcSigner | null;
-  connectWallet: () => Promise<void>;
+  connectWallet: (forcePrompt?: boolean) => Promise<void>;
   disconnectWallet: () => void;
   isConnecting: boolean;
 }
@@ -48,7 +48,7 @@ export const Web3Provider = ({ children }: { children: React.ReactNode }) => {
     }
   }, []);
 
-  const connectWallet = async () => {
+  const connectWallet = async (forcePrompt: boolean = false) => {
     if (typeof window === "undefined" || !window.ethereum) {
       alert("Please install MetaMask!");
       return;
@@ -64,6 +64,22 @@ export const Web3Provider = ({ children }: { children: React.ReactNode }) => {
         });
       } catch (switchError: any) {
         console.warn("Wallet switch failed or Sepolia not added:", switchError);
+      }
+
+      if (forcePrompt) {
+        try {
+          await window.ethereum.request({
+            method: "wallet_requestPermissions",
+            params: [{ eth_accounts: {} }],
+          });
+        } catch (permError: any) {
+          if (permError.code === 4001) {
+            // User rejected the request
+            setIsConnecting(false);
+            return;
+          }
+          console.error("Permissions request failed", permError);
+        }
       }
 
       const browserProvider = new ethers.BrowserProvider(window.ethereum);

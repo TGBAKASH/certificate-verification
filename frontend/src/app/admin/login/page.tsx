@@ -41,7 +41,7 @@ export default function AdminLogin() {
           <p className="text-center text-slate-500 text-sm mb-6">Make sure you're on the Sepolia testnet</p>
 
           <button
-            onClick={connectWallet}
+            onClick={() => connectWallet(true)}
             disabled={isConnecting}
             className="btn-primary w-full py-4 px-6 rounded-xl text-sm flex items-center justify-center space-x-2 disabled:opacity-60 disabled:cursor-not-allowed"
           >
