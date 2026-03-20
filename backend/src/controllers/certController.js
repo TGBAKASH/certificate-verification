@@ -44,7 +44,12 @@ exports.uploadAndHash = async (req, res) => {
 
 exports.issueCertificate = async (req, res) => {
   try {
-    const { certificateId, studentName, studentId, course, filePath, blockchainHash, issuerWallet, transactionHash } = req.body;
+    const { certificateId, studentName, studentEmail, studentId, course, filePath, blockchainHash, issuerWallet, transactionHash } = req.body;
+
+    // Validate required fields
+    if (!certificateId || !studentName || !studentEmail || !studentId || !course || !issuerWallet) {
+      return res.status(400).json({ error: "All fields are required" });
+    }
 
     const existingCert = await Certificate.findOne({ certificateId });
     if (existingCert) {
@@ -54,6 +59,7 @@ exports.issueCertificate = async (req, res) => {
     const newCert = new Certificate({
       certificateId,
       studentName,
+      studentEmail,
       studentId,
       course,
       filePath,

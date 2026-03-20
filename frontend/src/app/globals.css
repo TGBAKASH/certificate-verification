@@ -2,6 +2,26 @@
 @import "tailwindcss";
 
 :root {
+  --bg-primary: #f8fafc;
+  --bg-secondary: #f1f5f9;
+  --bg-card: rgba(255, 255, 255, 0.8);
+  --border-subtle: rgba(0, 0, 0, 0.08);
+  --border-glow: rgba(59, 130, 246, 0.3);
+  --accent-blue: #2563eb;
+  --accent-blue-light: #60a5fa;
+  --accent-green: #059669;
+  --accent-purple: #7c3aed;
+  --text-primary: #0f172a;
+  --text-secondary: #475569;
+  --text-muted: #64748b;
+  --gradient-hero: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 40%, #e2e8f0 100%);
+  --gradient-card: linear-gradient(135deg, rgba(255,255,255,0.9) 0%, rgba(255,255,255,0.6) 100%);
+  --gradient-accent: linear-gradient(135deg, #2563eb 0%, #7c3aed 100%);
+  --shadow-card: 0 4px 20px rgba(0,0,0,0.06), 0 1px 3px rgba(0,0,0,0.04);
+  --shadow-glow: 0 0 30px rgba(59, 130, 246, 0.2);
+}
+
+.dark {
   --bg-primary: #0a0f1e;
   --bg-secondary: #0d1529;
   --bg-card: rgba(255, 255, 255, 0.04);
@@ -62,7 +82,7 @@ body {
 
 /* Subtle input style */
 .input-dark {
-  background: rgba(255, 255, 255, 0.05);
+  background: var(--bg-primary);
   border: 1px solid var(--border-subtle);
   color: var(--text-primary);
   transition: border-color 0.2s, box-shadow 0.2s;
