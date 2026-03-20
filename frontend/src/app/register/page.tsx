@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { createUserWithEmailAndPassword } from "firebase/auth";
+import { createUserWithEmailAndPassword, signInWithPopup, GoogleAuthProvider } from "firebase/auth";
 import { auth } from "@/lib/firebase";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -13,6 +13,7 @@ export default function StudentRegister() {
   const [enrollmentId, setEnrollmentId] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
   const [loading, setLoading] = useState(false);
   const router = useRouter();
 
@@ -35,13 +36,41 @@ export default function StudentRegister() {
         enrollmentId
       });
 
-      // 3. Redirect to dashboard
-      router.push("/dashboard");
+      // 3. Show success and redirect
+      setSuccess("Account created successfully! Redirecting...");
+      setTimeout(() => router.push("/dashboard"), 1500);
     } catch (err: any) {
-      // If backend fails but Firebase succeeds, we have a synchronization issue, but for simple MVP it will show error.
       setError(err.response?.data?.error || err.message || "Failed to register");
-    } finally {
       setLoading(false);
+    }
+  };
+
+  const handleGoogleRegister = async () => {
+    setError("");
+    setLoading(true);
+    try {
+      const provider = new GoogleAuthProvider();
+      const userCredential = await signInWithPopup(auth, provider);
+      const idToken = await userCredential.user.getIdToken();
+      
+      const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api";
+      await axios.post(`${API_URL}/auth/register`, {
+        idToken,
+        name: userCredential.user.displayName || "Google User",
+        email: userCredential.user.email,
+        enrollmentId: `OAUTH-${userCredential.user.email?.split('@')[0] || Date.now()}`
+      });
+
+      setSuccess("Google login successful! Redirecting...");
+      setTimeout(() => router.push("/dashboard"), 1500);
+    } catch (err: any) {
+      if (err.response?.status === 400 && err.response?.data?.error?.includes("already exists")) {
+        setSuccess("Welcome back! Redirecting...");
+        setTimeout(() => router.push("/dashboard"), 1500);
+      } else {
+        setError(err.response?.data?.error || err.message || "Google registration failed");
+        setLoading(false);
+      }
     }
   };
 
@@ -53,6 +82,12 @@ export default function StudentRegister() {
         {error && (
           <div className="bg-red-500/10 border border-red-500/20 text-red-500 text-sm p-3 rounded-lg mb-4">
             {error}
+          </div>
+        )}
+        
+        {success && (
+          <div className="bg-green-500/10 border border-green-500/20 text-green-500 text-sm p-3 rounded-lg mb-4 text-center font-medium">
+            {success}
           </div>
         )}
 
@@ -110,6 +145,22 @@ export default function StudentRegister() {
             {loading ? "Registering..." : "Create Account"}
           </button>
         </form>
+
+        <div className="mt-4 flex items-center justify-between">
+          <hr className="w-full border-slate-700/50" />
+          <span className="px-3 text-slate-500 text-xs uppercase">or</span>
+          <hr className="w-full border-slate-700/50" />
+        </div>
+
+        <button
+          type="button"
+          onClick={handleGoogleRegister}
+          disabled={loading}
+          className="w-full flex items-center justify-center gap-3 bg-white/10 text-white border border-white/20 py-3 rounded-xl mt-4 hover:bg-white/20 transition-all disabled:opacity-50"
+        >
+          <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" className="w-5 h-5" />
+          Continue with Google
+        </button>
 
         <p className="text-center text-sm text-slate-500 mt-6">
           Already have an account?{" "}

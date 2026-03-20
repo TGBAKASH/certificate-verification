@@ -188,7 +188,17 @@ function VerifyCertificateContent() {
               </div>
               <div>
                 <p className="text-xs text-slate-500 uppercase tracking-wider mb-1">Issuer Wallet</p>
-                <p className="font-mono text-xs text-slate-500 bg-white/5 border border-white/5 p-2 rounded break-all">{certData.issuerWallet}</p>
+                <div className="flex items-center gap-2">
+                  <p className="font-mono text-xs text-slate-500 bg-white/5 border border-white/5 p-2 rounded break-all whitespace-normal">
+                    {certData.issuerWallet}
+                  </p>
+                  {(process.env.NEXT_PUBLIC_ADMIN_WALLET?.toLowerCase() === certData.issuerWallet.toLowerCase() || 
+                    certData.issuerWallet.toLowerCase() === "0x5f2549d4d1802c2bdd2018759cf7243c12da3488") && (
+                    <span className="bg-blue-500/20 text-blue-400 border border-blue-500/30 text-[10px] px-2 py-1 rounded-md tracking-widest uppercase font-bold whitespace-nowrap">
+                      Admin
+                    </span>
+                  )}
+                </div>
               </div>
             </div>
 

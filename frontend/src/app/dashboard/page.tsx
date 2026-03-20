@@ -114,9 +114,16 @@ export default function StudentDashboard() {
               <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-1">{cert.course}</h3>
               <p className="text-sm text-slate-500 mb-6">Issued {new Date(cert.issueDate).toLocaleDateString()}</p>
               
-              <Link href={`/verify?id=${cert.certificateId}`} className="block w-full text-center text-sm font-medium text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-500/10 hover:bg-blue-100 dark:hover:bg-blue-500/20 py-2 rounded-lg transition-colors">
-                View Certificate Record
-              </Link>
+              <div className="grid grid-cols-2 gap-2 mt-auto pt-2">
+                <Link href={`/verify?id=${cert.certificateId}`} className="text-center text-xs font-semibold text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-500/10 hover:bg-blue-100 dark:hover:bg-blue-500/20 py-2.5 rounded-lg transition-colors">
+                  Verify Record
+                </Link>
+                {cert.fileUrl && (
+                  <a href={`${(process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api").replace('/api', '')}${cert.fileUrl}`} target="_blank" rel="noopener noreferrer" className="text-center text-xs font-semibold text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-white/10 hover:bg-slate-50 dark:hover:bg-white/5 py-2.5 rounded-lg transition-colors">
+                    Download PDF
+                  </a>
+                )}
+              </div>
             </div>
           ))}
         </div>

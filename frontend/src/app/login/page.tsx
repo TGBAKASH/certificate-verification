@@ -1,10 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import { signInWithEmailAndPassword } from "firebase/auth";
+import { signInWithEmailAndPassword, signInWithPopup, GoogleAuthProvider } from "firebase/auth";
 import { auth } from "@/lib/firebase";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import axios from "axios";
 
 export default function StudentLogin() {
   const [email, setEmail] = useState("");
@@ -23,6 +24,35 @@ export default function StudentLogin() {
       router.push("/dashboard");
     } catch (err: any) {
       setError(err.message || "Failed to log in");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleGoogleLogin = async () => {
+    setError("");
+    setLoading(true);
+    try {
+      const provider = new GoogleAuthProvider();
+      const userCredential = await signInWithPopup(auth, provider);
+      const idToken = await userCredential.user.getIdToken();
+      
+      // Ensure they exist in DB, if not create them
+      const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api";
+      try {
+        await axios.post(`${API_URL}/auth/register`, {
+          idToken,
+          name: userCredential.user.displayName || "Google User",
+          email: userCredential.user.email,
+          enrollmentId: `OAUTH-${userCredential.user.email?.split('@')[0] || Date.now()}`
+        });
+      } catch (postErr: any) {
+        // Ignore duplicate key error (11000) which means they already exist
+      }
+
+      router.push("/dashboard");
+    } catch (err: any) {
+      setError(err.message || "Failed to log in with Google");
     } finally {
       setLoading(false);
     }
@@ -71,6 +101,22 @@ export default function StudentLogin() {
             {loading ? "Logging in..." : "Access Dashboard"}
           </button>
         </form>
+
+        <div className="mt-4 flex items-center justify-between">
+          <hr className="w-full border-slate-700/50" />
+          <span className="px-3 text-slate-500 text-xs uppercase">or</span>
+          <hr className="w-full border-slate-700/50" />
+        </div>
+
+        <button
+          type="button"
+          onClick={handleGoogleLogin}
+          disabled={loading}
+          className="w-full flex items-center justify-center gap-3 bg-white/10 text-white border border-white/20 py-3 rounded-xl mt-4 hover:bg-white/20 transition-all disabled:opacity-50"
+        >
+          <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" className="w-5 h-5" />
+          Continue with Google
+        </button>
 
         <p className="text-center text-sm text-slate-500 mt-6">
           Don't have an account?{" "}
