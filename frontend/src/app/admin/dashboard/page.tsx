@@ -23,6 +23,7 @@ export default function AdminDashboard() {
   // RBAC State
   const [isAdmin, setIsAdmin] = useState(false);
   const [isSuperAdmin, setIsSuperAdmin] = useState(false);
+  const [isCheckingRole, setIsCheckingRole] = useState(true);
   const [newAdminAddress, setNewAdminAddress] = useState('');
   const [addingAdmin, setAddingAdmin] = useState(false);
   const [rbacMessage, setRbacMessage] = useState({ text: '', type: '' });
@@ -43,6 +44,7 @@ export default function AdminDashboard() {
 
   const checkRole = async () => {
     if (!account || !window.ethereum) return;
+    setIsCheckingRole(true);
     try {
       const provider = new ethers.BrowserProvider(window.ethereum as any);
       const contract = new ethers.Contract(certArtifact.address, certArtifact.abi, provider);
@@ -54,6 +56,8 @@ export default function AdminDashboard() {
       setIsAdmin(adminStatus);
     } catch (err) {
       console.error("Failed to fetch admin role:", err);
+    } finally {
+      setIsCheckingRole(false);
     }
   };
 
@@ -96,11 +100,11 @@ export default function AdminDashboard() {
     }
   };
 
-  if (!account) return (
+  if (!account || isCheckingRole) return (
     <div className="flex items-center justify-center min-h-[60vh]">
       <div className="flex items-center space-x-3 text-slate-400">
         <div className="w-5 h-5 border-2 border-blue-500/30 border-t-blue-500 rounded-full animate-spin" />
-        <span>Loading...</span>
+        <span>Verifying authorization...</span>
       </div>
     </div>
   );
