@@ -30,11 +30,11 @@ export default function AdminDashboard() {
 
   useEffect(() => {
     if (account === null) {
+      // No wallet connected - stop checking and redirect after a short delay
+      setIsCheckingRole(false);
       const timer = setTimeout(() => {
-        if (!window.ethereum?.selectedAddress) {
-          router.push("/admin/login");
-        }
-      }, 500);
+        router.push("/admin/login");
+      }, 800);
       return () => clearTimeout(timer);
     } else {
       checkRole();
