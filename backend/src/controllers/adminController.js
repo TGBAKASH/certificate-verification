@@ -71,9 +71,9 @@ exports.syncAdmins = async (req, res) => {
   try {
     const { superAdminWallet, defaultName } = req.body;
 
-    const rpcUrl = process.env.SEPOLIA_RPC_URL;
-    if (!rpcUrl || !contractData.address || !contractData.abi.length) {
-      return res.status(500).json({ error: 'RPC URL or contract not configured' });
+    const rpcUrl = process.env.SEPOLIA_RPC_URL || 'https://ethereum-sepolia-rpc.publicnode.com';
+    if (!contractData.address || !contractData.abi.length) {
+      return res.status(500).json({ error: 'Contract not configured' });
     }
 
     const provider = new ethers.JsonRpcProvider(rpcUrl);
