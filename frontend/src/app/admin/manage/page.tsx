@@ -71,27 +71,37 @@ export default function ManageAdmins() {
     if (!isSuperAdmin || !newAdminWallet || !newAdminName) return;
     
     setTxLoading(true);
-    setTxMessage({ text: 'Waiting for blockchain confirmation...', type: 'info' });
+    setTxMessage({ text: 'Checking blockchain...', type: 'info' });
+    
+    const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api";
+
     try {
+      // First, check if they're already an admin on-chain
       const provider = new ethers.BrowserProvider(window.ethereum as any);
-      const contractSigner = await provider.getSigner();
-      const contract = new ethers.Contract(certArtifact.address, certArtifact.abi, contractSigner);
+      const contract = new ethers.Contract(certArtifact.address, certArtifact.abi, provider);
+      const alreadyAdmin = await contract.isAdmin(newAdminWallet);
       
-      // 1. Send transaction to add admin on blockchain
-      const tx = await contract.addAdmin(newAdminWallet);
-      setTxMessage({ text: 'Transaction submitted. Waiting for confirmation...', type: 'info' });
-      await tx.wait();
-      
-      // 2. Save admin to database
-      const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api";
+      if (!alreadyAdmin) {
+        // Not yet an admin — add them on the blockchain
+        setTxMessage({ text: 'Waiting for blockchain confirmation...', type: 'info' });
+        const contractSigner = await provider.getSigner();
+        const contractWithSigner = new ethers.Contract(certArtifact.address, certArtifact.abi, contractSigner);
+        const tx = await contractWithSigner.addAdmin(newAdminWallet);
+        setTxMessage({ text: 'Transaction submitted. Waiting for confirmation...', type: 'info' });
+        await tx.wait();
+      } else {
+        setTxMessage({ text: 'Already an admin on-chain. Saving to database...', type: 'info' });
+      }
+
+      // Save to MongoDB (whether they were just added or already existed on-chain)
       await axios.post(`${API_URL}/admins`, { name: newAdminName, walletAddress: newAdminWallet });
       
-      setTxMessage({ text: '✅ Admin successfully added!', type: 'success' });
+      setTxMessage({ text: '✅ Admin saved successfully!', type: 'success' });
       setNewAdminName('');
       setNewAdminWallet('');
       fetchAdmins();
     } catch (err: any) {
-      setTxMessage({ text: err.reason || err.response?.data?.error || err.message || 'Transaction failed', type: 'error' });
+      setTxMessage({ text: err.reason || err.response?.data?.error || err.message || 'Failed', type: 'error' });
     } finally {
       setTxLoading(false);
     }
