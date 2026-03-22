@@ -118,8 +118,8 @@ export default function StudentDashboard() {
                 <Link href={`/verify?id=${cert.certificateId}`} className="text-center text-xs font-semibold text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-500/10 hover:bg-blue-100 dark:hover:bg-blue-500/20 py-2.5 rounded-lg transition-colors">
                   Verify Record
                 </Link>
-                {cert.fileUrl && (
-                  <a href={`${(process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api").replace('/api', '')}${cert.fileUrl}`} target="_blank" rel="noopener noreferrer" className="text-center text-xs font-semibold text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-white/10 hover:bg-slate-50 dark:hover:bg-white/5 py-2.5 rounded-lg transition-colors">
+                {cert.filePath && (
+                  <a href={`${(process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api")}/certificate/${cert.certificateId}/download`} target="_blank" rel="noopener noreferrer" className="text-center text-xs font-semibold text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-white/10 hover:bg-slate-50 dark:hover:bg-white/5 py-2.5 rounded-lg transition-colors">
                     Download PDF
                   </a>
                 )}

@@ -170,7 +170,7 @@ function VerifyCertificateContent() {
                   <span className="text-xs text-slate-500 font-mono bg-white/5 px-3 py-1 rounded-full">{certId}</span>
                   {certData.filePath && (
                     <a 
-                      href={`${(process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api").replace('/api', '')}/${certData.filePath.replace(/\\/g, '/')}`}
+                      href={`${(process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api")}/certificate/${certId}/download`}
                       target="_blank" 
                       rel="noopener noreferrer"
                       className="text-[10px] uppercase tracking-wider font-bold bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 border border-blue-500/30 px-3 py-1.5 rounded transition-colors inline-flex items-center gap-1.5"

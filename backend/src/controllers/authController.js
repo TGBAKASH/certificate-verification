@@ -52,7 +52,7 @@ exports.getStudentDashboard = async (req, res) => {
     }
 
     // Fetch all certificates linked to this student's email
-    const certificates = await Certificate.find({ studentEmail: student.email }).sort({ issueDate: -1 });
+    const certificates = await Certificate.find({ studentEmail: student.email }).select('-fileData').sort({ issueDate: -1 });
 
     res.status(200).json({
       student: { name: student.name, email: student.email, enrollmentId: student.enrollmentId },

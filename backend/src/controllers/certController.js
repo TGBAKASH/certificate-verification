@@ -1,5 +1,6 @@
 const crypto = require('crypto');
 const fs = require('fs');
+const path = require('path');
 const Certificate = require('../models/Certificate');
 const ethers = require('ethers');
 
@@ -56,6 +57,14 @@ exports.issueCertificate = async (req, res) => {
       return res.status(400).json({ error: 'Certificate ID already exists' });
     }
 
+    let fileData = null;
+    let fileContentType = null;
+    if (filePath && fs.existsSync(filePath)) {
+      fileData = fs.readFileSync(filePath);
+      const ext = path.extname(filePath).toLowerCase();
+      fileContentType = (ext === '.png') ? 'image/png' : ((ext === '.jpg' || ext === '.jpeg') ? 'image/jpeg' : 'application/pdf');
+    }
+
     const newCert = new Certificate({
       certificateId,
       studentName,
@@ -63,12 +72,19 @@ exports.issueCertificate = async (req, res) => {
       studentId,
       course,
       filePath,
+      fileData,
+      fileContentType,
       blockchainHash,
       issuerWallet,
       transactionHash
     });
 
     await newCert.save();
+
+    // Optionally clean up the local file since it's now in the database
+    if (filePath && fs.existsSync(filePath)) {
+      try { fs.unlinkSync(filePath); } catch(e) {}
+    }
 
     res.status(201).json(newCert);
   } catch (err) {
@@ -78,7 +94,7 @@ exports.issueCertificate = async (req, res) => {
 
 exports.getCertificate = async (req, res) => {
   try {
-    const cert = await Certificate.findOne({ certificateId: req.params.id });
+    const cert = await Certificate.findOne({ certificateId: req.params.id }).select('-fileData');
     if (!cert) return res.status(404).json({ error: 'Certificate not found in DB' });
     res.json(cert);
   } catch (err) {
@@ -113,6 +129,7 @@ exports.getHistory = async (req, res) => {
 
     const total = await Certificate.countDocuments(searchQuery);
     const certificates = await Certificate.find(searchQuery)
+      .select('-fileData')
       .sort({ issueDate: sort })
       .skip(skip)
       .limit(limit);
@@ -205,6 +222,27 @@ exports.deleteCertificate = async (req, res) => {
 
     await Certificate.findOneAndDelete({ certificateId: id });
     res.json({ success: true, message: 'Certificate deleted successfully' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+exports.downloadCertificate = async (req, res) => {
+  try {
+    const cert = await Certificate.findOne({ certificateId: req.params.id });
+    if (!cert) return res.status(404).json({ error: 'Certificate not found' });
+    
+    if (cert.fileData) {
+      res.set('Content-Type', cert.fileContentType || 'application/pdf');
+      const ext = cert.fileContentType === 'image/jpeg' ? '.jpg' : cert.fileContentType === 'image/png' ? '.png' : '.pdf';
+      res.set('Content-Disposition', `attachment; filename="${cert.certificateId}${ext}"`);
+      return res.send(cert.fileData);
+    } else if (cert.filePath && fs.existsSync(cert.filePath)) {
+      // Fallback for files that might still exist on disk locally
+      return res.download(cert.filePath);
+    } else {
+      return res.status(404).json({ error: 'Certificate file is no longer available on the server.' });
+    }
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
