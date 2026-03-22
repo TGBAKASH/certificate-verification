@@ -250,7 +250,7 @@ export default function ManageAdmins() {
                   </div>
                   <button 
                     onClick={() => handleRemoveAdmin(admin.walletAddress)}
-                    disabled={txLoading || account.toLowerCase() === admin.walletAddress.toLowerCase()}
+                    disabled={txLoading || (!!account && account.toLowerCase() === admin.walletAddress.toLowerCase())}
                     className="self-start sm:self-center px-4 py-2 text-xs font-bold text-red-500 bg-red-500/10 border border-red-500/20 rounded-lg hover:bg-red-500/20 transition-all disabled:opacity-50"
                   >
                     Revoke Access
