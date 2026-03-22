@@ -54,9 +54,18 @@ export default function ManageAdmins() {
   };
 
   const fetchAdmins = async () => {
+    if (!account) return;
     try {
       setLoading(true);
       const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api";
+
+      // Auto-sync: find wallets that have issued certs but aren't in Admin collection yet
+      // This silently registers existing blockchain admins with the default name 'Wlt 1'
+      await axios.post(`${API_URL}/admins/sync`, {
+        superAdminWallet: account,
+        defaultName: 'Wlt 1'
+      }).catch(() => {}); // Don't fail the page if sync errors
+
       const res = await axios.get(`${API_URL}/admins`);
       setAdmins(res.data);
     } catch (err) {

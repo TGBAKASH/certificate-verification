@@ -16,10 +16,8 @@ exports.addAdmin = async (req, res) => {
     if (!name || !walletAddress) {
       return res.status(400).json({ error: 'Name and wallet address are required' });
     }
-
     const newAdmin = new Admin({ name, walletAddress: walletAddress.toLowerCase() });
     await newAdmin.save();
-    
     res.status(201).json(newAdmin);
   } catch (err) {
     if (err.code === 11000) {
@@ -41,10 +39,9 @@ exports.removeAdmin = async (req, res) => {
 
 exports.getDashboardStats = async (req, res) => {
   try {
-    const totalAdminsInDB = await Admin.countDocuments();
+    const totalAdmins = await Admin.countDocuments(); // Only show DB-tracked admins (no +1 for super admin)
     const totalCertificates = await Certificate.countDocuments();
-    
-    // Get today's start and end date
+
     const startOfDay = new Date();
     startOfDay.setHours(0, 0, 0, 0);
     const endOfDay = new Date();
@@ -54,11 +51,32 @@ exports.getDashboardStats = async (req, res) => {
       issueDate: { $gte: startOfDay, $lte: endOfDay }
     });
 
-    res.json({
-      totalAdmins: totalAdminsInDB + 1, // +1 for the super admin (stored on-chain, not in DB)
-      totalCertificates,
-      todayCertificates
-    });
+    res.json({ totalAdmins, totalCertificates, todayCertificates });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+// Auto-detect wallets that issued certs but aren't in Admin collection, and register them
+exports.syncAdmins = async (req, res) => {
+  try {
+    const { superAdminWallet, defaultName } = req.body;
+
+    const uniqueWallets = await Certificate.distinct('issuerWallet');
+    const inserted = [];
+
+    for (const wallet of uniqueWallets) {
+      if (!wallet) continue;
+      const lower = wallet.toLowerCase();
+      if (superAdminWallet && lower === superAdminWallet.toLowerCase()) continue;
+      const exists = await Admin.findOne({ walletAddress: lower });
+      if (exists) continue;
+      const newAdmin = new Admin({ walletAddress: lower, name: defaultName || 'Wlt 1' });
+      await newAdmin.save();
+      inserted.push(lower);
+    }
+
+    res.json({ inserted, message: `${inserted.length} admin(s) synced.` });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
