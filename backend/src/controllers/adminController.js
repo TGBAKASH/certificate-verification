@@ -41,7 +41,7 @@ exports.removeAdmin = async (req, res) => {
 
 exports.getDashboardStats = async (req, res) => {
   try {
-    const totalAdmins = await Admin.countDocuments();
+    const totalAdminsInDB = await Admin.countDocuments();
     const totalCertificates = await Certificate.countDocuments();
     
     // Get today's start and end date
@@ -55,7 +55,7 @@ exports.getDashboardStats = async (req, res) => {
     });
 
     res.json({
-      totalAdmins,
+      totalAdmins: totalAdminsInDB + 1, // +1 for the super admin (stored on-chain, not in DB)
       totalCertificates,
       todayCertificates
     });

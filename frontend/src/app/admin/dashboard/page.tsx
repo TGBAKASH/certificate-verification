@@ -163,7 +163,10 @@ export default function AdminDashboard() {
                 <span className="font-mono text-xs">{account.substring(0, 6)}...{account.substring(38)}</span>
               </span>
               {isSuperAdmin ? (
-                <Link href="/admin/manage" className="bg-orange-500/20 text-orange-400 border border-orange-500/30 px-2 py-0.5 rounded text-[10px] uppercase font-bold tracking-widest ml-2 hover:bg-orange-500/30 transition-colors">SUPER ADMIN</Link>
+                <Link href="/admin/manage" className="inline-flex items-center gap-1.5 bg-orange-500/20 text-orange-400 border border-orange-500/40 px-3 py-1 rounded-lg text-[11px] uppercase font-bold tracking-widest ml-2 hover:bg-orange-500/30 hover:text-orange-300 transition-colors cursor-pointer">
+                  SUPER ADMIN
+                  <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" /></svg>
+                </Link>
               ) : isAdmin ? (
                 <span className="bg-blue-500/20 text-blue-400 border border-blue-500/30 px-2 py-0.5 rounded text-[10px] uppercase font-bold tracking-widest ml-2">Admin</span>
               ) : null}
