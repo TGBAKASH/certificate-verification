@@ -134,6 +134,17 @@ export default function AdminDashboard() {
     setTxMessage({ text: '', type: '' });
   };
 
+  const handleDelete = async (id: string) => {
+    if (!confirm('Are you sure you want to delete this certificate record? This removes it from the database, but the hash remains on the blockchain.')) return;
+    try {
+      const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api";
+      await axios.delete(`${API_URL}/certificate/${id}`);
+      fetchHistory(); // Refresh the list
+    } catch (err: any) {
+      alert(err.response?.data?.error || 'Failed to delete certificate');
+    }
+  };
+
   // ─── Guards ───────────────────────────────────────────────────────────────
   if (!account || isCheckingRole) return (
     <div className="flex items-center justify-center min-h-[60vh]">
@@ -316,10 +327,18 @@ export default function AdminDashboard() {
                       <td className="px-6 py-4 text-sm text-slate-500">
                         {new Date(cert.issueDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
                       </td>
-                      <td className="px-6 py-4 text-right">
+                      <td className="px-6 py-4 text-right flex justify-end gap-2">
                         <Link href={`/verify?id=${cert.certificateId}`} className="text-xs dark:bg-white/5 bg-slate-900/5 border dark:border-white/10 border-slate-900/10 dark:text-slate-300 text-slate-700 hover:bg-blue-500/10 hover:border-blue-500/30 hover:text-blue-400 px-3 py-1.5 rounded-lg transition-all font-medium">
                           View ↗
                         </Link>
+                        {(isSuperAdmin || (cert.issuerWallet && cert.issuerWallet.toLowerCase() === account.toLowerCase())) && (
+                          <button 
+                            onClick={() => handleDelete(cert.certificateId)}
+                            className="text-xs bg-red-500/10 border border-red-500/20 text-red-500 hover:bg-red-500/20 hover:text-red-400 px-3 py-1.5 rounded-lg transition-all font-medium"
+                          >
+                            Delete
+                          </button>
+                        )}
                       </td>
                     </tr>
                   ))}

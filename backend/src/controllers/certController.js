@@ -183,3 +183,29 @@ exports.verifyCertificate = async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 };
+
+exports.deleteCertificate = async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    // Find the certificate
+    const cert = await Certificate.findOne({ certificateId: id });
+    if (!cert) {
+      return res.status(404).json({ error: 'Certificate not found in records' });
+    }
+
+    // Try to delete the physical file if it exists
+    if (cert.filePath && fs.existsSync(cert.filePath)) {
+      try {
+        fs.unlinkSync(cert.filePath);
+      } catch (err) {
+        console.warn('Could not delete file:', err);
+      }
+    }
+
+    await Certificate.findOneAndDelete({ certificateId: id });
+    res.json({ success: true, message: 'Certificate deleted successfully' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
