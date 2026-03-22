@@ -195,7 +195,12 @@ function VerifyCertificateContent() {
               </div>
               <div className="sm:col-span-2">
                 <p className="text-xs text-slate-500 uppercase tracking-wider mb-1">Course / Program</p>
-                <span className="text-sm bg-violet-500/10 border border-violet-500/20 text-violet-400 px-4 py-1.5 rounded-full inline-block">{certData.course}</span>
+                <div className="flex flex-col gap-2 items-start">
+                  <span className="text-sm bg-violet-500/10 border border-violet-500/20 text-violet-400 px-4 py-1.5 rounded-full inline-block">{certData.course}</span>
+                  {certData.certificateTitle && (
+                    <span className="text-xl font-bold dark:text-white text-slate-900">{certData.certificateTitle}</span>
+                  )}
+                </div>
               </div>
               <div>
                 <p className="text-xs text-slate-500 uppercase tracking-wider mb-1">Issued On</p>

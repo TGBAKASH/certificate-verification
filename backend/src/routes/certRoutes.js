@@ -18,6 +18,7 @@ const upload = multer({ storage: storage });
 router.post('/upload', upload.single('document'), certController.uploadAndHash);
 router.post('/issue-certificate', certController.issueCertificate);
 router.get('/certificate/:id', certController.getCertificate);
+router.get('/certificate/:id/download', certController.downloadCertificate);
 router.delete('/certificate/:id', certController.deleteCertificate);
 router.get('/history/:issuerWallet', certController.getHistory);
 

@@ -111,7 +111,7 @@ export default function StudentDashboard() {
                 </span>
               </div>
               
-              <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-1">{cert.course}</h3>
+              <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-1">{cert.certificateTitle || cert.course}</h3>
               <p className="text-sm text-slate-500 mb-6">Issued {new Date(cert.issueDate).toLocaleDateString()}</p>
               
               <div className="grid grid-cols-2 gap-2 mt-auto pt-2">

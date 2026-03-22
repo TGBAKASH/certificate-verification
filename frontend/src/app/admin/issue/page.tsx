@@ -12,7 +12,7 @@ export default function IssueCertificate() {
   const { account, signer, disconnectWallet } = useWeb3();
   const router = useRouter();
 
-  const [formData, setFormData] = useState({ studentName: "", studentEmail: "", studentId: "", course: "" });
+  const [formData, setFormData] = useState({ studentName: "", studentEmail: "", studentId: "", course: "", certificateTitle: "" });
   const [file, setFile] = useState<File | null>(null);
   const [loading, setLoading] = useState(false);
   const [statusMsg, setStatusMsg] = useState("");
@@ -71,6 +71,7 @@ export default function IssueCertificate() {
         studentEmail: formData.studentEmail,
         studentId: formData.studentId,
         course: formData.course,
+        certificateTitle: formData.certificateTitle,
         filePath,
         blockchainHash: docHash,
         issuerWallet: account,
@@ -171,8 +172,13 @@ export default function IssueCertificate() {
                 <p className="text-slate-500 text-sm">{issuedCert.studentId} &bull; {issuedCert.studentEmail}</p>
               </div>
               <div>
-                <p className="text-xs text-slate-500 uppercase tracking-wider mb-1">Course</p>
-                <span className="text-sm bg-violet-500/10 border border-violet-500/20 text-violet-400 px-3 py-1 rounded-full">{issuedCert.course}</span>
+                <p className="text-xs text-slate-500 uppercase tracking-wider mb-1">Course / Program</p>
+                <div className="flex flex-col gap-2 items-start">
+                  <span className="text-sm bg-violet-500/10 border border-violet-500/20 text-violet-400 px-3 py-1 rounded-full">{issuedCert.course}</span>
+                  {issuedCert.certificateTitle && (
+                    <span className="text-sm font-semibold dark:text-white text-slate-900">{issuedCert.certificateTitle}</span>
+                  )}
+                </div>
               </div>
               <div>
                 <p className="text-xs text-slate-500 uppercase tracking-wider mb-1">Transaction</p>
@@ -194,7 +200,7 @@ export default function IssueCertificate() {
           </div>
           
           <div className="px-8 pb-8">
-            <button onClick={() => { setIssuedCert(null); setStatusMsg(""); setFormData({ studentName: "", studentEmail: "", studentId: "", course: "" }); setFile(null); }} className="text-sm text-slate-600 dark:text-slate-400 border border-slate-300 dark:border-white/10 hover:bg-slate-100 dark:hover:bg-white/5 hover:text-slate-900 dark:hover:text-white px-5 py-2.5 rounded-xl transition-all">
+            <button onClick={() => { setIssuedCert(null); setStatusMsg(""); setFormData({ studentName: "", studentEmail: "", studentId: "", course: "", certificateTitle: "" }); setFile(null); }} className="text-sm text-slate-600 dark:text-slate-400 border border-slate-300 dark:border-white/10 hover:bg-slate-100 dark:hover:bg-white/5 hover:text-slate-900 dark:hover:text-white px-5 py-2.5 rounded-xl transition-all">
               Issue Another Certificate
             </button>
           </div>
@@ -226,6 +232,11 @@ export default function IssueCertificate() {
                 <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">Course / Program</label>
                 <input required type="text" className="input-dark w-full px-4 py-3 rounded-xl text-sm"
                   value={formData.course} onChange={e => setFormData({...formData, course: e.target.value})} placeholder="e.g. B.Tech Computer Science" />
+              </div>
+              <div className="md:col-span-2">
+                <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">Certificate Title (Optional)</label>
+                <input type="text" className="input-dark w-full px-4 py-3 rounded-xl text-sm"
+                  value={formData.certificateTitle} onChange={e => setFormData({...formData, certificateTitle: e.target.value})} placeholder="e.g. Certificate of Excellence, Winner of Hackathon" />
               </div>
             </div>
             <div>

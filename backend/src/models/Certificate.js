@@ -6,6 +6,7 @@ const CertificateSchema = new mongoose.Schema({
   studentEmail: { type: String, required: true },
   studentId: { type: String, required: true },
   course: { type: String, required: true },
+  certificateTitle: { type: String }, // e.g. "Certificate of Excellence"
   filePath: { type: String }, // e.g. path to PDF if stored locally/IPFS
   fileData: { type: Buffer }, // Store PDF/Image directly in MongoDB
   fileContentType: { type: String }, // e.g. 'application/pdf'

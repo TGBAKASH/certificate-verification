@@ -45,7 +45,7 @@ exports.uploadAndHash = async (req, res) => {
 
 exports.issueCertificate = async (req, res) => {
   try {
-    const { certificateId, studentName, studentEmail, studentId, course, filePath, blockchainHash, issuerWallet, transactionHash } = req.body;
+    const { certificateId, studentName, studentEmail, studentId, course, certificateTitle, filePath, blockchainHash, issuerWallet, transactionHash } = req.body;
 
     // Validate required fields
     if (!certificateId || !studentName || !studentEmail || !studentId || !course || !issuerWallet) {
@@ -71,6 +71,7 @@ exports.issueCertificate = async (req, res) => {
       studentEmail,
       studentId,
       course,
+      certificateTitle,
       filePath,
       fileData,
       fileContentType,
