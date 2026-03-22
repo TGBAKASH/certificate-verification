@@ -68,7 +68,9 @@ export default function AdminDashboard() {
     try {
       try {
         await window.ethereum.request({ method: 'wallet_switchEthereumChain', params: [{ chainId: '0xaa36a7' }] });
-      } catch {}
+      } catch (err) {
+        console.warn('Network switch failed or rejected:', err);
+      }
       const provider = new ethers.BrowserProvider(window.ethereum as any);
       const network = await provider.getNetwork();
       if (Number(network.chainId) !== 11155111) throw new Error('Wrong network');
@@ -135,7 +137,7 @@ export default function AdminDashboard() {
   // ─── Guards ───────────────────────────────────────────────────────────────
   if (!account || isCheckingRole) return (
     <div className="flex items-center justify-center min-h-[60vh]">
-      <div className="flex items-center space-x-3 text-slate-400">
+      <div className="flex items-center space-x-3 dark:text-slate-400 text-slate-500">
         <div className="w-5 h-5 border-2 border-blue-500/30 border-t-blue-500 rounded-full animate-spin" />
         <span>Verifying authorization...</span>
       </div>
@@ -146,12 +148,12 @@ export default function AdminDashboard() {
     <div className="min-h-[60vh] flex flex-col items-center justify-center text-center">
       <div className="glass p-10 rounded-2xl border border-yellow-500/20 max-w-lg">
         <div className="text-5xl mb-4">⚠️</div>
-        <h2 className="text-2xl font-bold text-white mb-2">Network Error</h2>
-        <p className="text-slate-400 mb-2">Could not verify your wallet role on the blockchain.</p>
+        <h2 className="text-2xl font-bold dark:text-white text-slate-900 mb-2">Network Error</h2>
+        <p className="dark:text-slate-400 text-slate-500 mb-2">Could not verify your wallet role on the blockchain.</p>
         <p className="text-slate-500 text-sm mb-6">Make sure your wallet is on the <strong className="text-yellow-400">Sepolia testnet</strong>.</p>
         <div className="flex flex-col sm:flex-row justify-center items-center gap-4">
           <button onClick={checkRole} className="btn-primary px-6 py-3 rounded-xl text-sm">Retry</button>
-          <button onClick={() => { disconnectWallet(); router.push('/admin/login'); }} className="px-6 py-3 rounded-xl text-sm font-medium text-slate-300 border border-white/10 hover:bg-white/5 transition-all">Disconnect & Reconnect</button>
+          <button onClick={() => { disconnectWallet(); router.push('/admin/login'); }} className="px-6 py-3 rounded-xl text-sm font-medium dark:text-slate-300 text-slate-700 border dark:border-white/10 border-slate-900/10 hover:dark:bg-white/5 bg-slate-900/5 transition-all">Disconnect & Reconnect</button>
         </div>
       </div>
     </div>
@@ -161,10 +163,10 @@ export default function AdminDashboard() {
     <div className="min-h-[60vh] flex flex-col items-center justify-center text-center">
       <div className="glass p-10 rounded-2xl border border-red-500/20 max-w-lg">
         <div className="text-5xl mb-4">🚫</div>
-        <h2 className="text-2xl font-bold text-white mb-2">Access Denied</h2>
-        <p className="text-slate-400 mb-6">Your wallet (<span className="font-mono text-xs">{account.substring(0,6)}...{account.substring(38)}</span>) is not authorized.</p>
+        <h2 className="text-2xl font-bold dark:text-white text-slate-900 mb-2">Access Denied</h2>
+        <p className="dark:text-slate-400 text-slate-500 mb-6">Your wallet (<span className="font-mono text-xs">{account.substring(0,6)}...{account.substring(38)}</span>) is not authorized.</p>
         <div className="flex flex-col sm:flex-row justify-center items-center gap-4">
-          <button onClick={() => { disconnectWallet(); router.push('/admin/login'); }} className="px-6 py-3 rounded-xl text-sm font-medium text-slate-300 border border-white/10 hover:bg-white/5 transition-all w-full sm:w-auto">Disconnect Wallet</button>
+          <button onClick={() => { disconnectWallet(); router.push('/admin/login'); }} className="px-6 py-3 rounded-xl text-sm font-medium dark:text-slate-300 text-slate-700 border dark:border-white/10 border-slate-900/10 hover:dark:bg-white/5 bg-slate-900/5 transition-all w-full sm:w-auto">Disconnect Wallet</button>
           <Link href="/" className="px-6 py-3 rounded-xl text-sm font-medium text-blue-400 bg-blue-500/10 hover:bg-blue-500/20 transition-all w-full sm:w-auto">Go Home</Link>
         </div>
       </div>
@@ -178,10 +180,10 @@ export default function AdminDashboard() {
       {/* Header */}
       <div className="glass rounded-2xl p-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-white">Admin Dashboard</h1>
+          <h1 className="text-2xl font-bold dark:text-white text-slate-900">Admin Dashboard</h1>
           <div className="flex items-center space-x-2 mt-1">
             <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
-            <p className="text-slate-400 text-sm font-mono">{account.substring(0, 6)}...{account.substring(38)}</p>
+            <p className="dark:text-slate-400 text-slate-500 text-sm font-mono">{account.substring(0, 6)}...{account.substring(38)}</p>
             {isSuperAdmin ? (
               <span className="bg-amber-500/20 text-amber-500 border border-amber-500/30 px-2 py-0.5 rounded text-[10px] uppercase font-bold tracking-widest ml-2">Super Admin</span>
             ) : isAdmin ? (
@@ -193,7 +195,7 @@ export default function AdminDashboard() {
           <Link href="/admin/issue" className="btn-primary px-5 py-2.5 rounded-xl text-sm inline-flex items-center space-x-2">
             <span>+ Issue Certificate</span>
           </Link>
-          <button onClick={() => { disconnectWallet(); router.push('/admin/login'); }} className="px-5 py-2.5 rounded-xl text-sm font-medium text-slate-400 border border-white/10 hover:bg-white/5 hover:text-white transition-all">
+          <button onClick={() => { disconnectWallet(); router.push('/admin/login'); }} className="px-5 py-2.5 rounded-xl text-sm font-medium dark:text-slate-400 text-slate-500 border dark:border-white/10 border-slate-900/10 hover:dark:bg-white/5 bg-slate-900/5 hover:dark:text-white text-slate-900 transition-all">
             Disconnect
           </button>
           {/* ⋮ Kebab menu — Super Admin only */}
@@ -201,7 +203,7 @@ export default function AdminDashboard() {
             <div className="relative" ref={menuRef}>
               <button
                 onClick={() => setMenuOpen(o => !o)}
-                className="w-10 h-10 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 flex items-center justify-center text-slate-400 hover:text-white transition-all"
+                className="w-10 h-10 rounded-xl border dark:border-white/10 border-slate-900/10 dark:bg-white/5 bg-slate-900/5 hover:dark:bg-white/10 bg-slate-900/10 flex items-center justify-center dark:text-slate-400 text-slate-500 hover:dark:text-white text-slate-900 transition-all"
                 title="Admin Controls"
               >
                 <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
@@ -209,17 +211,17 @@ export default function AdminDashboard() {
                 </svg>
               </button>
               {menuOpen && (
-                <div className="absolute right-0 mt-2 w-52 glass rounded-xl border border-white/10 shadow-2xl z-50 overflow-hidden">
+                <div className="absolute right-0 mt-2 w-52 glass rounded-xl border dark:border-white/10 border-slate-900/10 shadow-2xl z-50 overflow-hidden">
                   <button
                     onClick={() => { setModalMode('add'); setMenuOpen(false); }}
-                    className="w-full flex items-center gap-3 px-4 py-3 text-sm text-slate-300 hover:bg-white/5 hover:text-white transition-all text-left"
+                    className="w-full flex items-center gap-3 px-4 py-3 text-sm dark:text-slate-300 text-slate-700 hover:dark:bg-white/5 bg-slate-900/5 hover:dark:text-white text-slate-900 transition-all text-left"
                   >
                     <span className="text-green-400">➕</span>
                     Add Admin
                   </button>
                   <button
                     onClick={() => { setModalMode('remove'); setMenuOpen(false); }}
-                    className="w-full flex items-center gap-3 px-4 py-3 text-sm text-slate-300 hover:bg-white/5 hover:text-red-400 transition-all text-left"
+                    className="w-full flex items-center gap-3 px-4 py-3 text-sm dark:text-slate-300 text-slate-700 hover:dark:bg-white/5 bg-slate-900/5 hover:text-red-400 transition-all text-left"
                   >
                     <span className="text-red-400">🗑️</span>
                     Remove Admin
@@ -240,7 +242,7 @@ export default function AdminDashboard() {
         ].map((stat) => (
           <div key={stat.label} className={`glass rounded-xl p-5 bg-gradient-to-br ${stat.color} border ${stat.border}`}>
             <div className="text-2xl mb-2">{stat.icon}</div>
-            <div className="text-2xl font-bold text-white">{loading && stat.label.includes('Total') ? '—' : stat.value}</div>
+            <div className="text-2xl font-bold dark:text-white text-slate-900">{loading && stat.label.includes('Total') ? '—' : stat.value}</div>
             <div className="text-xs text-slate-500 mt-1 uppercase tracking-wider">{stat.label}</div>
           </div>
         ))}
@@ -248,8 +250,8 @@ export default function AdminDashboard() {
 
       {/* History Table */}
       <div className="glass rounded-2xl overflow-hidden">
-        <div className="p-6 border-b border-white/5 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-          <h2 className="text-base font-semibold text-white">
+        <div className="p-6 border-b dark:border-white/5 border-slate-900/5 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+          <h2 className="text-base font-semibold dark:text-white text-slate-900">
             {isSuperAdmin ? 'All Issuance History' : 'My Issuance History'}
           </h2>
           <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
@@ -259,11 +261,11 @@ export default function AdminDashboard() {
                 value={searchInput}
                 onChange={(e) => { setSearchInput(e.target.value); if (e.target.value === '') { setSearch(''); setPage(1); } }}
                 placeholder="Search certificates..."
-                className="input-dark text-sm px-3 py-2 rounded-l-lg w-44 text-slate-300"
+                className="input-dark text-sm px-3 py-2 rounded-l-lg w-44 dark:text-slate-300 text-slate-700"
               />
-              <button type="submit" className="bg-blue-600 hover:bg-blue-500 text-white text-sm px-4 py-2 rounded-r-lg transition-colors font-medium">Search</button>
+              <button type="submit" className="bg-blue-600 hover:bg-blue-500 dark:text-white text-slate-900 text-sm px-4 py-2 rounded-r-lg transition-colors font-medium">Search</button>
             </form>
-            <select value={sort} onChange={(e) => setSort(e.target.value as 'asc' | 'desc')} className="input-dark text-sm px-3 py-2 rounded-lg text-slate-300">
+            <select value={sort} onChange={(e) => setSort(e.target.value as 'asc' | 'desc')} className="input-dark text-sm px-3 py-2 rounded-lg dark:text-slate-300 text-slate-700">
               <option value="desc">Newest First</option>
               <option value="asc">Oldest First</option>
             </select>
@@ -278,7 +280,7 @@ export default function AdminDashboard() {
         ) : history.length === 0 ? (
           <div className="p-16 flex flex-col items-center justify-center text-slate-500">
             <div className="text-5xl mb-4">📭</div>
-            <p className="font-medium text-slate-400">{search ? 'No matching certificates' : 'No certificates issued yet'}</p>
+            <p className="font-medium dark:text-slate-400 text-slate-500">{search ? 'No matching certificates' : 'No certificates issued yet'}</p>
             <p className="text-sm mt-1 text-slate-600">{search ? 'Try a different search term' : 'Click "+ Issue Certificate" to get started'}</p>
           </div>
         ) : (
@@ -300,7 +302,7 @@ export default function AdminDashboard() {
                     <tr key={cert.certificateId} className="hover:bg-white/2 transition-colors">
                       <td className="px-6 py-4 font-mono text-xs text-blue-400">{cert.certificateId}</td>
                       <td className="px-6 py-4">
-                        <p className="text-sm font-semibold text-slate-200">{cert.studentName}</p>
+                        <p className="text-sm font-semibold dark:text-slate-200 text-slate-800">{cert.studentName}</p>
                         <p className="text-xs text-slate-500">{cert.studentId}</p>
                       </td>
                       <td className="px-6 py-4">
@@ -308,14 +310,14 @@ export default function AdminDashboard() {
                       </td>
                       {isSuperAdmin && (
                         <td className="px-6 py-4">
-                          <span className="font-mono text-xs text-slate-400">{cert.issuerWallet ? `${cert.issuerWallet.substring(0,6)}...${cert.issuerWallet.substring(38)}` : '—'}</span>
+                          <span className="font-mono text-xs dark:text-slate-400 text-slate-500">{cert.issuerWallet ? `${cert.issuerWallet.substring(0,6)}...${cert.issuerWallet.substring(38)}` : '—'}</span>
                         </td>
                       )}
                       <td className="px-6 py-4 text-sm text-slate-500">
                         {new Date(cert.issueDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
                       </td>
                       <td className="px-6 py-4 text-right">
-                        <Link href={`/verify?id=${cert.certificateId}`} className="text-xs bg-white/5 border border-white/10 text-slate-300 hover:bg-blue-500/10 hover:border-blue-500/30 hover:text-blue-400 px-3 py-1.5 rounded-lg transition-all font-medium">
+                        <Link href={`/verify?id=${cert.certificateId}`} className="text-xs dark:bg-white/5 bg-slate-900/5 border dark:border-white/10 border-slate-900/10 dark:text-slate-300 text-slate-700 hover:bg-blue-500/10 hover:border-blue-500/30 hover:text-blue-400 px-3 py-1.5 rounded-lg transition-all font-medium">
                           View ↗
                         </Link>
                       </td>
@@ -325,10 +327,10 @@ export default function AdminDashboard() {
               </table>
             </div>
             {totalPages > 1 && (
-              <div className="flex justify-between items-center px-6 py-4 border-t border-white/5">
-                <button disabled={page === 1} onClick={() => setPage(p => p - 1)} className="px-4 py-2 text-sm font-medium text-slate-400 border border-white/10 rounded-lg hover:bg-white/5 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed transition-all">← Previous</button>
-                <span className="text-sm text-slate-500">Page <span className="font-semibold text-slate-300">{page}</span> of <span className="font-semibold text-slate-300">{totalPages}</span></span>
-                <button disabled={page === totalPages} onClick={() => setPage(p => p + 1)} className="px-4 py-2 text-sm font-medium text-slate-400 border border-white/10 rounded-lg hover:bg-white/5 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed transition-all">Next →</button>
+              <div className="flex justify-between items-center px-6 py-4 border-t dark:border-white/5 border-slate-900/5">
+                <button disabled={page === 1} onClick={() => setPage(p => p - 1)} className="px-4 py-2 text-sm font-medium dark:text-slate-400 text-slate-500 border dark:border-white/10 border-slate-900/10 rounded-lg hover:dark:bg-white/5 bg-slate-900/5 hover:dark:text-white text-slate-900 disabled:opacity-30 disabled:cursor-not-allowed transition-all">← Previous</button>
+                <span className="text-sm text-slate-500">Page <span className="font-semibold dark:text-slate-300 text-slate-700">{page}</span> of <span className="font-semibold dark:text-slate-300 text-slate-700">{totalPages}</span></span>
+                <button disabled={page === totalPages} onClick={() => setPage(p => p + 1)} className="px-4 py-2 text-sm font-medium dark:text-slate-400 text-slate-500 border dark:border-white/10 border-slate-900/10 rounded-lg hover:dark:bg-white/5 bg-slate-900/5 hover:dark:text-white text-slate-900 disabled:opacity-30 disabled:cursor-not-allowed transition-all">Next →</button>
               </div>
             )}
           </>
@@ -338,13 +340,13 @@ export default function AdminDashboard() {
       {/* Add / Remove Admin Modal */}
       {modalMode !== 'none' && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm" onClick={closeModal}>
-          <div className="glass rounded-2xl p-8 w-full max-w-md border border-white/10 shadow-2xl mx-4" onClick={e => e.stopPropagation()}>
+          <div className="glass rounded-2xl p-8 w-full max-w-md border dark:border-white/10 border-slate-900/10 shadow-2xl mx-4" onClick={e => e.stopPropagation()}>
             <div className="flex items-center gap-3 mb-6">
               <div className={`w-9 h-9 rounded-lg flex items-center justify-center text-xl ${modalMode === 'add' ? 'bg-green-500/10 border border-green-500/20' : 'bg-red-500/10 border border-red-500/20'}`}>
                 {modalMode === 'add' ? '➕' : '🗑️'}
               </div>
               <div>
-                <h3 className="text-lg font-bold text-white">{modalMode === 'add' ? 'Add Admin' : 'Remove Admin'}</h3>
+                <h3 className="text-lg font-bold dark:text-white text-slate-900">{modalMode === 'add' ? 'Add Admin' : 'Remove Admin'}</h3>
                 <p className="text-xs text-slate-500">{modalMode === 'add' ? 'Authorize a wallet to issue certificates' : 'Revoke a wallet\'s admin privileges'}</p>
               </div>
             </div>
@@ -353,7 +355,7 @@ export default function AdminDashboard() {
               placeholder="0x..."
               value={adminAddress}
               onChange={e => setAdminAddress(e.target.value)}
-              className="w-full input-dark px-4 py-3 rounded-xl text-sm font-mono text-slate-300 mb-4"
+              className="w-full input-dark px-4 py-3 rounded-xl text-sm font-mono dark:text-slate-300 text-slate-700 mb-4"
             />
             {txMessage.text && (
               <div className={`mb-4 p-3 rounded-lg text-sm border ${txMessage.type === 'error' ? 'bg-red-500/10 border-red-500/20 text-red-400' : txMessage.type === 'success' ? 'bg-green-500/10 border-green-500/20 text-green-400' : 'bg-blue-500/10 border-blue-500/20 text-blue-400'}`}>
@@ -361,11 +363,11 @@ export default function AdminDashboard() {
               </div>
             )}
             <div className="flex gap-3">
-              <button onClick={closeModal} className="flex-1 px-4 py-2.5 rounded-xl text-sm font-medium text-slate-400 border border-white/10 hover:bg-white/5 hover:text-white transition-all">Cancel</button>
+              <button onClick={closeModal} className="flex-1 px-4 py-2.5 rounded-xl text-sm font-medium dark:text-slate-400 text-slate-500 border dark:border-white/10 border-slate-900/10 hover:dark:bg-white/5 bg-slate-900/5 hover:dark:text-white text-slate-900 transition-all">Cancel</button>
               <button
                 onClick={() => handleAdminAction(modalMode as 'add' | 'remove')}
                 disabled={txLoading || !adminAddress}
-                className={`flex-1 px-4 py-2.5 rounded-xl text-sm font-bold text-white transition-all disabled:opacity-50 ${modalMode === 'add' ? 'bg-green-600 hover:bg-green-500' : 'bg-red-600 hover:bg-red-500'}`}
+                className={`flex-1 px-4 py-2.5 rounded-xl text-sm font-bold dark:text-white text-slate-900 transition-all disabled:opacity-50 ${modalMode === 'add' ? 'bg-green-600 hover:bg-green-500' : 'bg-red-600 hover:bg-red-500'}`}
               >
                 {txLoading ? 'Processing...' : modalMode === 'add' ? 'Add Admin' : 'Remove Admin'}
               </button>
