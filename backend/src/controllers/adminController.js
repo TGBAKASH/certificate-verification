@@ -1,5 +1,13 @@
 const Admin = require('../models/Admin');
 const Certificate = require('../models/Certificate');
+const { ethers } = require('ethers');
+
+let contractData = { address: '', abi: [] };
+try {
+  contractData = require('../../contracts/CertificateRegistry.json');
+} catch (e) {
+  console.warn('Contract ABI not found in adminController.');
+}
 
 exports.getAdmins = async (req, res) => {
   try {
@@ -39,7 +47,7 @@ exports.removeAdmin = async (req, res) => {
 
 exports.getDashboardStats = async (req, res) => {
   try {
-    const totalAdmins = await Admin.countDocuments(); // Only show DB-tracked admins (no +1 for super admin)
+    const totalAdmins = await Admin.countDocuments();
     const totalCertificates = await Certificate.countDocuments();
 
     const startOfDay = new Date();
@@ -57,27 +65,47 @@ exports.getDashboardStats = async (req, res) => {
   }
 };
 
-// Auto-detect wallets that issued certs but aren't in Admin collection, and register them
+// Read AdminAdded events from blockchain to find all admins ever added on-chain
+// Then register any not yet in MongoDB with a default name
 exports.syncAdmins = async (req, res) => {
   try {
     const { superAdminWallet, defaultName } = req.body;
 
-    const uniqueWallets = await Certificate.distinct('issuerWallet');
-    const inserted = [];
-
-    for (const wallet of uniqueWallets) {
-      if (!wallet) continue;
-      const lower = wallet.toLowerCase();
-      if (superAdminWallet && lower === superAdminWallet.toLowerCase()) continue;
-      const exists = await Admin.findOne({ walletAddress: lower });
-      if (exists) continue;
-      const newAdmin = new Admin({ walletAddress: lower, name: defaultName || 'Wlt 1' });
-      await newAdmin.save();
-      inserted.push(lower);
+    const rpcUrl = process.env.SEPOLIA_RPC_URL;
+    if (!rpcUrl || !contractData.address || !contractData.abi.length) {
+      return res.status(500).json({ error: 'RPC URL or contract not configured' });
     }
 
-    res.json({ inserted, message: `${inserted.length} admin(s) synced.` });
+    const provider = new ethers.JsonRpcProvider(rpcUrl);
+    const contract = new ethers.Contract(contractData.address, contractData.abi, provider);
+
+    // Query all AdminAdded events from contract deployment to now
+    const addedEvents = await contract.queryFilter(contract.filters.AdminAdded(), 0, 'latest');
+    const removedEvents = await contract.queryFilter(contract.filters.AdminRemoved(), 0, 'latest');
+
+    // Build a set of removed wallets so we exclude them
+    const removedSet = new Set(removedEvents.map(e => e.args[0].toLowerCase()));
+
+    const inserted = [];
+    for (const event of addedEvents) {
+      const wallet = event.args[0].toLowerCase();
+
+      // Skip if subsequently removed
+      if (removedSet.has(wallet)) continue;
+      // Skip super admin
+      if (superAdminWallet && wallet === superAdminWallet.toLowerCase()) continue;
+      // Skip if already in DB
+      const exists = await Admin.findOne({ walletAddress: wallet });
+      if (exists) continue;
+
+      const newAdmin = new Admin({ walletAddress: wallet, name: defaultName || 'Wlt 1' });
+      await newAdmin.save();
+      inserted.push(wallet);
+    }
+
+    res.json({ inserted, message: `${inserted.length} admin(s) synced from blockchain events.` });
   } catch (err) {
+    console.error('syncAdmins error:', err);
     res.status(500).json({ error: err.message });
   }
 };
