@@ -1,5 +1,5 @@
 {
-  "address": "0xC4D379FC68E377AF801E64539af2E3d3fBdBF034",
+  "address": "0xC38F12679200a03d29EC122534889a9aD570AF33",
   "abi": [
     {
       "inputs": [],
@@ -17,6 +17,19 @@
         }
       ],
       "name": "AdminAdded",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": false,
+          "internalType": "address",
+          "name": "removedAdmin",
+          "type": "address"
+        }
+      ],
+      "name": "AdminRemoved",
       "type": "event"
     },
     {
@@ -125,6 +138,19 @@
         }
       ],
       "name": "issueCertificate",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "_admin",
+          "type": "address"
+        }
+      ],
+      "name": "removeAdmin",
       "outputs": [],
       "stateMutability": "nonpayable",
       "type": "function"

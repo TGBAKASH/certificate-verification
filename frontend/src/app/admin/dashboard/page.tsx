@@ -1,7 +1,7 @@
 "use client";
 import { useWeb3 } from "@/context/Web3Context";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from 'next/link';
 import axios from 'axios';
 import { ethers } from "ethers";
@@ -10,7 +10,7 @@ import certArtifact from "@/contracts/CertificateRegistry.json";
 export default function AdminDashboard() {
   const { account, disconnectWallet } = useWeb3();
   const router = useRouter();
-  
+
   const [history, setHistory] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
@@ -25,48 +25,57 @@ export default function AdminDashboard() {
   const [isSuperAdmin, setIsSuperAdmin] = useState(false);
   const [isCheckingRole, setIsCheckingRole] = useState(true);
   const [roleCheckFailed, setRoleCheckFailed] = useState(false);
-  const [newAdminAddress, setNewAdminAddress] = useState('');
-  const [addingAdmin, setAddingAdmin] = useState(false);
-  const [rbacMessage, setRbacMessage] = useState({ text: '', type: '' });
+
+  // Kebab menu state
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [modalMode, setModalMode] = useState<'none' | 'add' | 'remove'>('none');
+  const [adminAddress, setAdminAddress] = useState('');
+  const [txLoading, setTxLoading] = useState(false);
+  const [txMessage, setTxMessage] = useState({ text: '', type: '' });
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  // Close menu when clicking outside
+  useEffect(() => {
+    const handleClick = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setMenuOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClick);
+    return () => document.removeEventListener('mousedown', handleClick);
+  }, []);
 
   useEffect(() => {
     if (account === null) {
-      // No wallet connected - stop checking and redirect after a short delay
       setIsCheckingRole(false);
-      const timer = setTimeout(() => {
-        router.push("/admin/login");
-      }, 800);
+      const timer = setTimeout(() => router.push("/admin/login"), 800);
       return () => clearTimeout(timer);
     } else {
       checkRole();
+    }
+  }, [account]);
+
+  useEffect(() => {
+    if (account && !isCheckingRole && (isAdmin || isSuperAdmin)) {
       fetchHistory();
     }
-  }, [account, router, page, sort, search]);
+  }, [account, page, sort, search, isAdmin, isSuperAdmin, isCheckingRole]);
 
   const checkRole = async () => {
     if (!account || !window.ethereum) return;
     setIsCheckingRole(true);
     setRoleCheckFailed(false);
     try {
-      // Force Sepolia network
       try {
-        await window.ethereum.request({
-          method: 'wallet_switchEthereumChain',
-          params: [{ chainId: '0xaa36a7' }],
-        });
-      } catch (switchErr) {
-        console.warn('Could not switch to Sepolia:', switchErr);
-      }
+        await window.ethereum.request({ method: 'wallet_switchEthereumChain', params: [{ chainId: '0xaa36a7' }] });
+      } catch {}
       const provider = new ethers.BrowserProvider(window.ethereum as any);
       const network = await provider.getNetwork();
-      if (Number(network.chainId) !== 11155111) {
-        throw new Error('Wrong network — please switch to Sepolia');
-      }
+      if (Number(network.chainId) !== 11155111) throw new Error('Wrong network');
       const contract = new ethers.Contract(certArtifact.address, certArtifact.abi, provider);
-      
       const sAdmin = await contract.superAdmin();
-      setIsSuperAdmin(sAdmin.toLowerCase() === account.toLowerCase());
-      
+      const isSA = sAdmin.toLowerCase() === account.toLowerCase();
+      setIsSuperAdmin(isSA);
       const adminStatus = await contract.isAdmin(account);
       setIsAdmin(adminStatus);
     } catch (err) {
@@ -77,35 +86,16 @@ export default function AdminDashboard() {
     }
   };
 
-  const handleAddAdmin = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!isSuperAdmin) return;
-    setAddingAdmin(true);
-    setRbacMessage({ text: 'Waiting for blockchain confirmation...', type: 'info' });
-    try {
-      const provider = new ethers.BrowserProvider(window.ethereum as any);
-      const signer = await provider.getSigner();
-      const contract = new ethers.Contract(certArtifact.address, certArtifact.abi, signer);
-      
-      const tx = await contract.addAdmin(newAdminAddress);
-      setRbacMessage({ text: 'Transaction submitted. Waiting for mining...', type: 'info' });
-      await tx.wait();
-      
-      setRbacMessage({ text: 'Admin successfully added!', type: 'success' });
-      setNewAdminAddress('');
-    } catch (err: any) {
-      setRbacMessage({ text: err.reason || err.message || 'Transaction failed', type: 'error' });
-    } finally {
-      setAddingAdmin(false);
-    }
-  };
-
   const fetchHistory = async () => {
     if (!account) return;
     setLoading(true);
     try {
       const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api";
-      const res = await axios.get(`${API_URL}/history/${account}?page=${page}&limit=10&sort=${sort}&search=${encodeURIComponent(search)}`);
+      // Super admin sees ALL certificates; regular admin sees only their own
+      const endpoint = isSuperAdmin
+        ? `${API_URL}/history/all?page=${page}&limit=10&sort=${sort}&search=${encodeURIComponent(search)}`
+        : `${API_URL}/history/${account}?page=${page}&limit=10&sort=${sort}&search=${encodeURIComponent(search)}`;
+      const res = await axios.get(endpoint);
       setHistory(res.data.certificates);
       setTotalPages(res.data.totalPages || 1);
       setTotalCount(res.data.totalCount || 0);
@@ -116,6 +106,33 @@ export default function AdminDashboard() {
     }
   };
 
+  const handleAdminAction = async (action: 'add' | 'remove') => {
+    if (!isSuperAdmin || !adminAddress) return;
+    setTxLoading(true);
+    setTxMessage({ text: 'Waiting for blockchain confirmation...', type: 'info' });
+    try {
+      const provider = new ethers.BrowserProvider(window.ethereum as any);
+      const signer = await provider.getSigner();
+      const contract = new ethers.Contract(certArtifact.address, certArtifact.abi, signer);
+      const tx = action === 'add' ? await contract.addAdmin(adminAddress) : await contract.removeAdmin(adminAddress);
+      setTxMessage({ text: 'Transaction submitted. Waiting for confirmation...', type: 'info' });
+      await tx.wait();
+      setTxMessage({ text: action === 'add' ? '✅ Admin successfully added!' : '✅ Admin successfully removed!', type: 'success' });
+      setAdminAddress('');
+    } catch (err: any) {
+      setTxMessage({ text: err.reason || err.message || 'Transaction failed', type: 'error' });
+    } finally {
+      setTxLoading(false);
+    }
+  };
+
+  const closeModal = () => {
+    setModalMode('none');
+    setAdminAddress('');
+    setTxMessage({ text: '', type: '' });
+  };
+
+  // ─── Guards ───────────────────────────────────────────────────────────────
   if (!account || isCheckingRole) return (
     <div className="flex items-center justify-center min-h-[60vh]">
       <div className="flex items-center space-x-3 text-slate-400">
@@ -125,61 +142,45 @@ export default function AdminDashboard() {
     </div>
   );
 
-  if (roleCheckFailed) {
-    return (
-      <div className="min-h-[60vh] flex flex-col items-center justify-center text-center">
-        <div className="glass p-10 rounded-2xl border border-yellow-500/20 max-w-lg">
-          <div className="text-5xl mb-4">⚠️</div>
-          <h2 className="text-2xl font-bold text-white mb-2">Network Error</h2>
-          <p className="text-slate-400 mb-2">Could not verify your wallet role on the blockchain.</p>
-          <p className="text-slate-500 text-sm mb-6">Make sure your wallet is connected to the <strong className="text-yellow-400">Sepolia testnet</strong>.</p>
-          <div className="flex flex-col sm:flex-row justify-center items-center gap-4">
-            <button onClick={checkRole} className="btn-primary px-6 py-3 rounded-xl text-sm">
-              Retry
-            </button>
-            <button
-              onClick={() => { disconnectWallet(); router.push('/admin/login'); }}
-              className="px-6 py-3 rounded-xl text-sm font-medium text-slate-300 border border-white/10 hover:bg-white/5 hover:text-white transition-all"
-            >
-              Disconnect &amp; Reconnect
-            </button>
-          </div>
+  if (roleCheckFailed) return (
+    <div className="min-h-[60vh] flex flex-col items-center justify-center text-center">
+      <div className="glass p-10 rounded-2xl border border-yellow-500/20 max-w-lg">
+        <div className="text-5xl mb-4">⚠️</div>
+        <h2 className="text-2xl font-bold text-white mb-2">Network Error</h2>
+        <p className="text-slate-400 mb-2">Could not verify your wallet role on the blockchain.</p>
+        <p className="text-slate-500 text-sm mb-6">Make sure your wallet is on the <strong className="text-yellow-400">Sepolia testnet</strong>.</p>
+        <div className="flex flex-col sm:flex-row justify-center items-center gap-4">
+          <button onClick={checkRole} className="btn-primary px-6 py-3 rounded-xl text-sm">Retry</button>
+          <button onClick={() => { disconnectWallet(); router.push('/admin/login'); }} className="px-6 py-3 rounded-xl text-sm font-medium text-slate-300 border border-white/10 hover:bg-white/5 transition-all">Disconnect & Reconnect</button>
         </div>
       </div>
-    );
-  }
+    </div>
+  );
 
-  if (!isAdmin && !isSuperAdmin && account) {
-    return (
-      <div className="min-h-[60vh] flex flex-col items-center justify-center text-center">
-        <div className="glass p-10 rounded-2xl border border-red-500/20 max-w-lg">
-          <div className="text-5xl mb-4">🚫</div>
-          <h2 className="text-2xl font-bold text-white mb-2">Access Denied</h2>
-          <p className="text-slate-400 mb-6">Your wallet (<span className="font-mono text-xs">{account.substring(0,6)}...{account.substring(38)}</span>) is not authorized to access the Admin Dashboard.</p>
-          <div className="flex flex-col sm:flex-row justify-center items-center gap-4">
-            <button 
-              onClick={() => { disconnectWallet(); router.push('/admin/login'); }}
-              className="px-6 py-3 rounded-xl text-sm font-medium text-slate-300 border border-white/10 hover:bg-white/5 hover:text-white transition-all w-full sm:w-auto"
-            >
-              Disconnect Wallet
-            </button>
-            <Link href="/" className="px-6 py-3 rounded-xl text-sm font-medium text-blue-400 bg-blue-500/10 hover:bg-blue-500/20 transition-all w-full sm:w-auto">
-              Go Home
-            </Link>
-          </div>
+  if (!isAdmin && !isSuperAdmin) return (
+    <div className="min-h-[60vh] flex flex-col items-center justify-center text-center">
+      <div className="glass p-10 rounded-2xl border border-red-500/20 max-w-lg">
+        <div className="text-5xl mb-4">🚫</div>
+        <h2 className="text-2xl font-bold text-white mb-2">Access Denied</h2>
+        <p className="text-slate-400 mb-6">Your wallet (<span className="font-mono text-xs">{account.substring(0,6)}...{account.substring(38)}</span>) is not authorized.</p>
+        <div className="flex flex-col sm:flex-row justify-center items-center gap-4">
+          <button onClick={() => { disconnectWallet(); router.push('/admin/login'); }} className="px-6 py-3 rounded-xl text-sm font-medium text-slate-300 border border-white/10 hover:bg-white/5 transition-all w-full sm:w-auto">Disconnect Wallet</button>
+          <Link href="/" className="px-6 py-3 rounded-xl text-sm font-medium text-blue-400 bg-blue-500/10 hover:bg-blue-500/20 transition-all w-full sm:w-auto">Go Home</Link>
         </div>
       </div>
-    );
-  }
+    </div>
+  );
 
+  // ─── Main Dashboard ───────────────────────────────────────────────────────
   return (
     <div className="space-y-6">
+
       {/* Header */}
       <div className="glass rounded-2xl p-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
           <h1 className="text-2xl font-bold text-white">Admin Dashboard</h1>
           <div className="flex items-center space-x-2 mt-1">
-            <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse"></span>
+            <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
             <p className="text-slate-400 text-sm font-mono">{account.substring(0, 6)}...{account.substring(38)}</p>
             {isSuperAdmin ? (
               <span className="bg-amber-500/20 text-amber-500 border border-amber-500/30 px-2 py-0.5 rounded text-[10px] uppercase font-bold tracking-widest ml-2">Super Admin</span>
@@ -188,77 +189,69 @@ export default function AdminDashboard() {
             ) : null}
           </div>
         </div>
-        <div className="flex space-x-3">
+        <div className="flex items-center space-x-3">
           <Link href="/admin/issue" className="btn-primary px-5 py-2.5 rounded-xl text-sm inline-flex items-center space-x-2">
-            <span>+</span>
-            <span>Issue Certificate</span>
+            <span>+ Issue Certificate</span>
           </Link>
-          <button 
-            onClick={() => { disconnectWallet(); router.push('/admin/login'); }} 
-            className="px-5 py-2.5 rounded-xl text-sm font-medium text-slate-400 border border-white/10 hover:bg-white/5 hover:text-white transition-all"
-          >
+          <button onClick={() => { disconnectWallet(); router.push('/admin/login'); }} className="px-5 py-2.5 rounded-xl text-sm font-medium text-slate-400 border border-white/10 hover:bg-white/5 hover:text-white transition-all">
             Disconnect
           </button>
+          {/* ⋮ Kebab menu — Super Admin only */}
+          {isSuperAdmin && (
+            <div className="relative" ref={menuRef}>
+              <button
+                onClick={() => setMenuOpen(o => !o)}
+                className="w-10 h-10 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 flex items-center justify-center text-slate-400 hover:text-white transition-all"
+                title="Admin Controls"
+              >
+                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                  <circle cx="12" cy="5" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="12" cy="19" r="1.5"/>
+                </svg>
+              </button>
+              {menuOpen && (
+                <div className="absolute right-0 mt-2 w-52 glass rounded-xl border border-white/10 shadow-2xl z-50 overflow-hidden">
+                  <button
+                    onClick={() => { setModalMode('add'); setMenuOpen(false); }}
+                    className="w-full flex items-center gap-3 px-4 py-3 text-sm text-slate-300 hover:bg-white/5 hover:text-white transition-all text-left"
+                  >
+                    <span className="text-green-400">➕</span>
+                    Add Admin
+                  </button>
+                  <button
+                    onClick={() => { setModalMode('remove'); setMenuOpen(false); }}
+                    className="w-full flex items-center gap-3 px-4 py-3 text-sm text-slate-300 hover:bg-white/5 hover:text-red-400 transition-all text-left"
+                  >
+                    <span className="text-red-400">🗑️</span>
+                    Remove Admin
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </div>
 
       {/* Stats */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         {[
-          { label: 'Total Issued', value: totalCount, icon: '📜', color: 'from-blue-500/20 to-blue-600/10', border: 'border-blue-500/20' },
+          { label: isSuperAdmin ? 'Total (All Admins)' : 'Total Issued', value: totalCount, icon: '📜', color: 'from-blue-500/20 to-blue-600/10', border: 'border-blue-500/20' },
           { label: 'Network', value: 'Sepolia', icon: '⛓️', color: 'from-violet-500/20 to-violet-600/10', border: 'border-violet-500/20' },
           { label: 'Status', value: 'Active', icon: '✅', color: 'from-emerald-500/20 to-emerald-600/10', border: 'border-emerald-500/20' },
         ].map((stat) => (
           <div key={stat.label} className={`glass rounded-xl p-5 bg-gradient-to-br ${stat.color} border ${stat.border}`}>
             <div className="text-2xl mb-2">{stat.icon}</div>
-            <div className="text-2xl font-bold text-white">{loading && stat.label === 'Total Issued' ? '—' : stat.value}</div>
+            <div className="text-2xl font-bold text-white">{loading && stat.label.includes('Total') ? '—' : stat.value}</div>
             <div className="text-xs text-slate-500 mt-1 uppercase tracking-wider">{stat.label}</div>
           </div>
         ))}
       </div>
 
-      {/* Super Admin Panel */}
-      {isSuperAdmin && (
-        <div className="glass rounded-2xl p-6 border border-amber-500/20" style={{ boxShadow: '0 0 40px rgba(245,158,11,0.05)' }}>
-          <div className="flex items-center gap-3 mb-4">
-            <div className="w-8 h-8 rounded-lg bg-amber-500/10 flex items-center justify-center text-amber-500 border border-amber-500/20">
-              👑
-            </div>
-            <div>
-              <h2 className="text-base font-bold text-white">Super Admin Controls</h2>
-              <p className="text-xs text-slate-400">Authorize new wallets to issue certificates</p>
-            </div>
-          </div>
-          <form onSubmit={handleAddAdmin} className="flex flex-col sm:flex-row gap-3">
-            <input 
-              type="text" 
-              placeholder="0x..." 
-              value={newAdminAddress}
-              onChange={(e) => setNewAdminAddress(e.target.value)}
-              required
-              className="flex-1 input-dark px-4 py-2.5 rounded-xl text-sm font-mono text-slate-300"
-            />
-            <button 
-              type="submit" 
-              disabled={addingAdmin}
-              className="bg-amber-600 hover:bg-amber-500 text-white font-medium px-6 py-2.5 rounded-xl transition-colors disabled:opacity-50 text-sm whitespace-nowrap"
-            >
-              {addingAdmin ? 'Adding...' : 'Add Admin'}
-            </button>
-          </form>
-          {rbacMessage.text && (
-            <div className={`mt-3 p-3 rounded-lg text-sm border ${rbacMessage.type === 'error' ? 'bg-red-500/10 border-red-500/20 text-red-500' : rbacMessage.type === 'success' ? 'bg-green-500/10 border-green-500/20 text-green-500' : 'bg-blue-500/10 border-blue-500/20 text-blue-400'}`}>
-              {rbacMessage.text}
-            </div>
-          )}
-        </div>
-      )}
-
       {/* History Table */}
       <div className="glass rounded-2xl overflow-hidden">
-        {/* Table Header w/ Search & Sort */}
         <div className="p-6 border-b border-white/5 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-          <h2 className="text-base font-semibold text-white">Issuance History</h2>
+          <h2 className="text-base font-semibold text-white">
+            {isSuperAdmin ? 'All Issuance History' : 'My Issuance History'}
+          </h2>
           <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
             <form onSubmit={(e) => { e.preventDefault(); setSearch(searchInput); setPage(1); }} className="flex">
               <input
@@ -268,15 +261,9 @@ export default function AdminDashboard() {
                 placeholder="Search certificates..."
                 className="input-dark text-sm px-3 py-2 rounded-l-lg w-44 text-slate-300"
               />
-              <button type="submit" className="bg-blue-600 hover:bg-blue-500 text-white text-sm px-4 py-2 rounded-r-lg transition-colors font-medium">
-                Search
-              </button>
+              <button type="submit" className="bg-blue-600 hover:bg-blue-500 text-white text-sm px-4 py-2 rounded-r-lg transition-colors font-medium">Search</button>
             </form>
-            <select 
-              value={sort} 
-              onChange={(e) => setSort(e.target.value as 'asc' | 'desc')}
-              className="input-dark text-sm px-3 py-2 rounded-lg text-slate-300"
-            >
+            <select value={sort} onChange={(e) => setSort(e.target.value as 'asc' | 'desc')} className="input-dark text-sm px-3 py-2 rounded-lg text-slate-300">
               <option value="desc">Newest First</option>
               <option value="asc">Oldest First</option>
             </select>
@@ -291,8 +278,8 @@ export default function AdminDashboard() {
         ) : history.length === 0 ? (
           <div className="p-16 flex flex-col items-center justify-center text-slate-500">
             <div className="text-5xl mb-4">📭</div>
-            <p className="font-medium text-slate-400">{search ? 'No matching certificates found' : 'No certificates issued yet'}</p>
-            <p className="text-sm mt-1 text-slate-600">{search ? 'Try a different search term' : 'Click "Issue Certificate" to get started'}</p>
+            <p className="font-medium text-slate-400">{search ? 'No matching certificates' : 'No certificates issued yet'}</p>
+            <p className="text-sm mt-1 text-slate-600">{search ? 'Try a different search term' : 'Click "+ Issue Certificate" to get started'}</p>
           </div>
         ) : (
           <>
@@ -303,13 +290,14 @@ export default function AdminDashboard() {
                     <th className="px-6 py-4 font-semibold">Certificate ID</th>
                     <th className="px-6 py-4 font-semibold">Student</th>
                     <th className="px-6 py-4 font-semibold">Course</th>
+                    {isSuperAdmin && <th className="px-6 py-4 font-semibold">Issuer</th>}
                     <th className="px-6 py-4 font-semibold">Date</th>
                     <th className="px-6 py-4 font-semibold text-right">Action</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-white/5">
                   {history.map((cert) => (
-                    <tr key={cert.certificateId} className="table-row transition-colors">
+                    <tr key={cert.certificateId} className="hover:bg-white/2 transition-colors">
                       <td className="px-6 py-4 font-mono text-xs text-blue-400">{cert.certificateId}</td>
                       <td className="px-6 py-4">
                         <p className="text-sm font-semibold text-slate-200">{cert.studentName}</p>
@@ -318,6 +306,11 @@ export default function AdminDashboard() {
                       <td className="px-6 py-4">
                         <span className="text-xs bg-blue-500/10 text-blue-400 border border-blue-500/20 px-2 py-1 rounded-full">{cert.course}</span>
                       </td>
+                      {isSuperAdmin && (
+                        <td className="px-6 py-4">
+                          <span className="font-mono text-xs text-slate-400">{cert.issuerWallet ? `${cert.issuerWallet.substring(0,6)}...${cert.issuerWallet.substring(38)}` : '—'}</span>
+                        </td>
+                      )}
                       <td className="px-6 py-4 text-sm text-slate-500">
                         {new Date(cert.issueDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
                       </td>
@@ -331,33 +324,55 @@ export default function AdminDashboard() {
                 </tbody>
               </table>
             </div>
-
             {totalPages > 1 && (
               <div className="flex justify-between items-center px-6 py-4 border-t border-white/5">
-                <button 
-                  disabled={page === 1} 
-                  onClick={() => setPage(p => p - 1)}
-                  className="px-4 py-2 text-sm font-medium text-slate-400 border border-white/10 rounded-lg hover:bg-white/5 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed transition-all"
-                >
-                  ← Previous
-                </button>
-                <span className="text-sm text-slate-500">
-                  Page <span className="font-semibold text-slate-300">{page}</span> of <span className="font-semibold text-slate-300">{totalPages}</span>
-                </span>
-                <button 
-                  disabled={page === totalPages} 
-                  onClick={() => setPage(p => p + 1)}
-                  className="px-4 py-2 text-sm font-medium text-slate-400 border border-white/10 rounded-lg hover:bg-white/5 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed transition-all"
-                >
-                  Next →
-                </button>
+                <button disabled={page === 1} onClick={() => setPage(p => p - 1)} className="px-4 py-2 text-sm font-medium text-slate-400 border border-white/10 rounded-lg hover:bg-white/5 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed transition-all">← Previous</button>
+                <span className="text-sm text-slate-500">Page <span className="font-semibold text-slate-300">{page}</span> of <span className="font-semibold text-slate-300">{totalPages}</span></span>
+                <button disabled={page === totalPages} onClick={() => setPage(p => p + 1)} className="px-4 py-2 text-sm font-medium text-slate-400 border border-white/10 rounded-lg hover:bg-white/5 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed transition-all">Next →</button>
               </div>
             )}
           </>
         )}
       </div>
+
+      {/* Add / Remove Admin Modal */}
+      {modalMode !== 'none' && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm" onClick={closeModal}>
+          <div className="glass rounded-2xl p-8 w-full max-w-md border border-white/10 shadow-2xl mx-4" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center gap-3 mb-6">
+              <div className={`w-9 h-9 rounded-lg flex items-center justify-center text-xl ${modalMode === 'add' ? 'bg-green-500/10 border border-green-500/20' : 'bg-red-500/10 border border-red-500/20'}`}>
+                {modalMode === 'add' ? '➕' : '🗑️'}
+              </div>
+              <div>
+                <h3 className="text-lg font-bold text-white">{modalMode === 'add' ? 'Add Admin' : 'Remove Admin'}</h3>
+                <p className="text-xs text-slate-500">{modalMode === 'add' ? 'Authorize a wallet to issue certificates' : 'Revoke a wallet\'s admin privileges'}</p>
+              </div>
+            </div>
+            <input
+              type="text"
+              placeholder="0x..."
+              value={adminAddress}
+              onChange={e => setAdminAddress(e.target.value)}
+              className="w-full input-dark px-4 py-3 rounded-xl text-sm font-mono text-slate-300 mb-4"
+            />
+            {txMessage.text && (
+              <div className={`mb-4 p-3 rounded-lg text-sm border ${txMessage.type === 'error' ? 'bg-red-500/10 border-red-500/20 text-red-400' : txMessage.type === 'success' ? 'bg-green-500/10 border-green-500/20 text-green-400' : 'bg-blue-500/10 border-blue-500/20 text-blue-400'}`}>
+                {txMessage.text}
+              </div>
+            )}
+            <div className="flex gap-3">
+              <button onClick={closeModal} className="flex-1 px-4 py-2.5 rounded-xl text-sm font-medium text-slate-400 border border-white/10 hover:bg-white/5 hover:text-white transition-all">Cancel</button>
+              <button
+                onClick={() => handleAdminAction(modalMode as 'add' | 'remove')}
+                disabled={txLoading || !adminAddress}
+                className={`flex-1 px-4 py-2.5 rounded-xl text-sm font-bold text-white transition-all disabled:opacity-50 ${modalMode === 'add' ? 'bg-green-600 hover:bg-green-500' : 'bg-red-600 hover:bg-red-500'}`}
+              >
+                {txLoading ? 'Processing...' : modalMode === 'add' ? 'Add Admin' : 'Remove Admin'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
-
-

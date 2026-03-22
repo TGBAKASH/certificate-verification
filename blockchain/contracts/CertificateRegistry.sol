@@ -15,6 +15,7 @@ contract CertificateRegistry {
 
     event CertificateIssued(string certificateId, string certificateHash, address issuer, uint256 timestamp);
     event AdminAdded(address newAdmin);
+    event AdminRemoved(address removedAdmin);
 
     modifier onlySuperAdmin() {
         require(msg.sender == superAdmin, "Only super admin can perform this");
@@ -35,6 +36,13 @@ contract CertificateRegistry {
         require(!isAdmin[_newAdmin], "Address is already an admin");
         isAdmin[_newAdmin] = true;
         emit AdminAdded(_newAdmin);
+    }
+
+    function removeAdmin(address _admin) public onlySuperAdmin {
+        require(_admin != superAdmin, "Cannot remove super admin");
+        require(isAdmin[_admin], "Address is not an admin");
+        isAdmin[_admin] = false;
+        emit AdminRemoved(_admin);
     }
 
     function issueCertificate(string memory _certificateId, string memory _certificateHash) public onlyAdmin {

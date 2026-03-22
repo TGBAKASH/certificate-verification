@@ -44,9 +44,6 @@ export default function RootLayout({
                       <a href="/dashboard" className="text-sm text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white px-3 py-2 rounded-lg hover:bg-slate-200 dark:hover:bg-white/5 transition-all font-medium">
                         Student
                       </a>
-                      <a href="/admin/login" className="text-sm text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white px-3 py-2 rounded-lg hover:bg-slate-200 dark:hover:bg-white/5 transition-all font-medium">
-                        Admin
-                      </a>
                       
                       <div className="w-px h-6 bg-slate-300 dark:bg-slate-700 mx-1"></div>
                       <ThemeToggle />
