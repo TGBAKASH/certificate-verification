@@ -51,7 +51,7 @@ export const Web3Provider = ({ children }: { children: React.ReactNode }) => {
 
   const connectWallet = async (forcePrompt: boolean = false) => {
     if (typeof window === "undefined" || !window.ethereum) {
-      alert("Please install MetaMask!");
+      alert("Please install a Web3 wallet extension like MetaMask or Rabby!");
       return;
     }
     setIsConnecting(true);

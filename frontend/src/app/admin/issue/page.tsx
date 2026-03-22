@@ -42,7 +42,7 @@ export default function IssueCertificate() {
 
   const handleIssue = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!account || !signer) { alert("Please connect MetaMask account"); return; }
+    if (!account || !signer) { alert("Please connect your wallet account"); return; }
     if (!file) { alert("Please upload a certificate PDF"); return; }
 
     setLoading(true);
@@ -57,7 +57,7 @@ export default function IssueCertificate() {
       const docHash = uploadRes.data.hash;
       const filePath = uploadRes.data.filePath;
 
-      setStatusMsg("Waiting for blockchain confirmation... Please approve the MetaMask transaction.");
+      setStatusMsg("Waiting for blockchain confirmation... Please approve the transaction in your wallet.");
       const contract = new ethers.Contract(certArtifact.address, certArtifact.abi, signer);
       const certId = `CERT-${Date.now()}-${Math.floor(Math.random() * 10000)}`;
       const tx = await contract.issueCertificate(certId, docHash);

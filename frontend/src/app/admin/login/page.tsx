@@ -18,7 +18,7 @@ export default function AdminLogin() {
     if (!window.ethereum) return;
     setSwitchingWallet(true);
     try {
-      // This shows ALL MetaMask accounts (connected and unconnected)
+      // This shows ALL wallet accounts (connected and unconnected)
       await window.ethereum.request({
         method: "wallet_requestPermissions",
         params: [{ eth_accounts: {} }],
@@ -47,7 +47,7 @@ export default function AdminLogin() {
 
         {/* Glass Card */}
         <div className="glass rounded-2xl p-8" style={{ boxShadow: 'var(--shadow-card), 0 0 60px rgba(139, 92, 246, 0.1)' }}>
-          {/* Metamask icon */}
+          {/* Wallet icon */}
           <div className="flex justify-center mb-6">
             <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-orange-400 to-orange-600 flex items-center justify-center shadow-lg shadow-orange-500/20">
               <svg className="w-10 h-10 dark:text-white text-slate-900" viewBox="0 0 24 24" fill="currentColor">
@@ -56,10 +56,10 @@ export default function AdminLogin() {
             </div>
           </div>
 
-          <h2 className="text-center text-lg font-semibold dark:text-white text-slate-900 mb-1">Connect MetaMask</h2>
+          <h2 className="text-center text-lg font-semibold dark:text-white text-slate-900 mb-1">Connect Wallet</h2>
           <p className="text-center text-slate-500 text-sm mb-6">Make sure you're on the Sepolia testnet</p>
 
-          {/* Primary: Connect the currently selected MetaMask wallet */}
+          {/* Primary: Connect the currently selected wallet */}
           <button
             onClick={() => connectWallet(false)}
             disabled={isConnecting || switchingWallet}
@@ -86,7 +86,7 @@ export default function AdminLogin() {
             disabled={isConnecting || switchingWallet}
             className="w-full mt-3 py-3 px-6 rounded-xl text-sm font-medium dark:text-slate-400 text-slate-500 border dark:border-white/10 border-slate-900/10 hover:dark:bg-white/5 bg-slate-900/5 hover:dark:text-white text-slate-900 transition-all disabled:opacity-40"
           >
-            {switchingWallet ? "Opening MetaMask..." : "🔄 Use a Different Wallet"}
+            {switchingWallet ? "Opening Wallet..." : "🔄 Use a Different Wallet"}
           </button>
 
           <div className="mt-6 pt-6 border-t dark:border-white/5 border-slate-900/5">
