@@ -234,8 +234,8 @@ export default function IssueCertificate() {
                   value={formData.course} onChange={e => setFormData({...formData, course: e.target.value})} placeholder="e.g. B.Tech Computer Science" />
               </div>
               <div className="md:col-span-2">
-                <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">Certificate Title (Optional)</label>
-                <input type="text" className="input-dark w-full px-4 py-3 rounded-xl text-sm"
+                <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">Certificate Title</label>
+                <input required type="text" className="input-dark w-full px-4 py-3 rounded-xl text-sm"
                   value={formData.certificateTitle} onChange={e => setFormData({...formData, certificateTitle: e.target.value})} placeholder="e.g. Certificate of Excellence, Winner of Hackathon" />
               </div>
             </div>

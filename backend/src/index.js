@@ -4,6 +4,7 @@ const mongoose = require('mongoose');
 const cors = require('cors');
 const certRoutes = require('./routes/certRoutes');
 const authRoutes = require('./routes/authRoutes');
+const adminRoutes = require('./routes/adminRoutes');
 const path = require('path');
 
 const app = express();
@@ -17,6 +18,7 @@ app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
 app.use('/api', certRoutes);
 app.use('/api/auth', authRoutes);
+app.use('/api', adminRoutes);
 
 const fs = require('fs');
 

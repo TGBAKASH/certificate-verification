@@ -1,7 +1,7 @@
 "use client";
 import { useWeb3 } from "@/context/Web3Context";
 import { useRouter } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import Link from 'next/link';
 import axios from 'axios';
 import { ethers } from "ethers";
@@ -26,24 +26,7 @@ export default function AdminDashboard() {
   const [isCheckingRole, setIsCheckingRole] = useState(true);
   const [roleCheckFailed, setRoleCheckFailed] = useState(false);
 
-  // Kebab menu state
-  const [menuOpen, setMenuOpen] = useState(false);
-  const [modalMode, setModalMode] = useState<'none' | 'add' | 'remove'>('none');
-  const [adminAddress, setAdminAddress] = useState('');
-  const [txLoading, setTxLoading] = useState(false);
-  const [txMessage, setTxMessage] = useState({ text: '', type: '' });
-  const menuRef = useRef<HTMLDivElement>(null);
-
-  // Close menu when clicking outside
-  useEffect(() => {
-    const handleClick = (e: MouseEvent) => {
-      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
-        setMenuOpen(false);
-      }
-    };
-    document.addEventListener('mousedown', handleClick);
-    return () => document.removeEventListener('mousedown', handleClick);
-  }, []);
+  const [stats, setStats] = useState({ totalCertificates: 0, totalAdmins: 0, todayCertificates: 0 });
 
   useEffect(() => {
     if (account === null) {
@@ -93,46 +76,26 @@ export default function AdminDashboard() {
     setLoading(true);
     try {
       const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api";
-      // Super admin sees ALL certificates; regular admin sees only their own
-      const endpoint = isSuperAdmin
-        ? `${API_URL}/history/all?page=${page}&limit=10&sort=${sort}&search=${encodeURIComponent(search)}`
-        : `${API_URL}/history/${account}?page=${page}&limit=10&sort=${sort}&search=${encodeURIComponent(search)}`;
-      const res = await axios.get(endpoint);
-      setHistory(res.data.certificates);
-      setTotalPages(res.data.totalPages || 1);
-      setTotalCount(res.data.totalCount || 0);
+      // Fetch history and stats concurrently
+      const [historyRes, statsRes] = await Promise.all([
+        axios.get(isSuperAdmin
+          ? `${API_URL}/history/all?page=${page}&limit=10&sort=${sort}&search=${encodeURIComponent(search)}`
+          : `${API_URL}/history/${account}?page=${page}&limit=10&sort=${sort}&search=${encodeURIComponent(search)}`),
+        axios.get(`${API_URL}/dashboard-stats`)
+      ]);
+      
+      setHistory(historyRes.data.certificates);
+      setTotalPages(historyRes.data.totalPages || 1);
+      setTotalCount(historyRes.data.totalCount || 0);
+      setStats(statsRes.data);
     } catch (err) {
-      console.error("Failed to fetch history:", err);
+      console.error("Failed to fetch history or stats:", err);
     } finally {
       setLoading(false);
     }
   };
 
-  const handleAdminAction = async (action: 'add' | 'remove') => {
-    if (!isSuperAdmin || !adminAddress) return;
-    setTxLoading(true);
-    setTxMessage({ text: 'Waiting for blockchain confirmation...', type: 'info' });
-    try {
-      const provider = new ethers.BrowserProvider(window.ethereum as any);
-      const signer = await provider.getSigner();
-      const contract = new ethers.Contract(certArtifact.address, certArtifact.abi, signer);
-      const tx = action === 'add' ? await contract.addAdmin(adminAddress) : await contract.removeAdmin(adminAddress);
-      setTxMessage({ text: 'Transaction submitted. Waiting for confirmation...', type: 'info' });
-      await tx.wait();
-      setTxMessage({ text: action === 'add' ? '✅ Admin successfully added!' : '✅ Admin successfully removed!', type: 'success' });
-      setAdminAddress('');
-    } catch (err: any) {
-      setTxMessage({ text: err.reason || err.message || 'Transaction failed', type: 'error' });
-    } finally {
-      setTxLoading(false);
-    }
-  };
 
-  const closeModal = () => {
-    setModalMode('none');
-    setAdminAddress('');
-    setTxMessage({ text: '', type: '' });
-  };
 
   const handleDelete = async (id: string) => {
     if (!confirm('Are you sure you want to delete this certificate record? This removes it from the database, but the hash remains on the blockchain.')) return;
@@ -190,73 +153,49 @@ export default function AdminDashboard() {
 
       {/* Header */}
       <div className="glass rounded-2xl p-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <div>
-          <h1 className="text-2xl font-bold dark:text-white text-slate-900">Admin Dashboard</h1>
-          <div className="flex items-center space-x-2 mt-1">
-            <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
-            <p className="dark:text-slate-400 text-slate-500 text-sm font-mono">{account.substring(0, 6)}...{account.substring(38)}</p>
-            {isSuperAdmin ? (
-              <span className="bg-amber-500/20 text-amber-500 border border-amber-500/30 px-2 py-0.5 rounded text-[10px] uppercase font-bold tracking-widest ml-2">Super Admin</span>
-            ) : isAdmin ? (
-              <span className="bg-blue-500/20 text-blue-400 border border-blue-500/30 px-2 py-0.5 rounded text-[10px] uppercase font-bold tracking-widest ml-2">Admin</span>
-            ) : null}
+        <div className="flex flex-col">
+            <h2 className="text-2xl font-bold dark:text-white text-slate-900 flex items-center">
+              Admin Dashboard
+            </h2>
+            <div className="flex flex-wrap items-center mt-2 gap-2 text-sm text-slate-500">
+              <span className="flex items-center">
+                <span className="w-2 h-2 rounded-full bg-green-500 mr-2 animate-pulse"></span>
+                <span className="font-mono text-xs">{account.substring(0, 6)}...{account.substring(38)}</span>
+              </span>
+              {isSuperAdmin ? (
+                <Link href="/admin/manage" className="bg-orange-500/20 text-orange-400 border border-orange-500/30 px-2 py-0.5 rounded text-[10px] uppercase font-bold tracking-widest ml-2 hover:bg-orange-500/30 transition-colors">SUPER ADMIN</Link>
+              ) : isAdmin ? (
+                <span className="bg-blue-500/20 text-blue-400 border border-blue-500/30 px-2 py-0.5 rounded text-[10px] uppercase font-bold tracking-widest ml-2">Admin</span>
+              ) : null}
+            </div>
+          </div>
+          <div className="flex items-center gap-3">
+            <Link href="/admin/issue" className="btn-primary px-5 py-2.5 rounded-xl text-sm font-medium inline-flex items-center gap-2">
+              <span>+ Issue Certificate</span>
+            </Link>
+            <button onClick={() => { disconnectWallet(); router.push('/admin/login'); }} className="px-5 py-2.5 rounded-xl text-sm font-medium dark:text-slate-400 text-slate-500 border dark:border-white/10 border-slate-900/10 hover:dark:bg-white/5 bg-slate-900/5 hover:dark:text-white text-slate-900 transition-all">
+              Disconnect
+            </button>
           </div>
         </div>
-        <div className="flex items-center space-x-3">
-          <Link href="/admin/issue" className="btn-primary px-5 py-2.5 rounded-xl text-sm inline-flex items-center space-x-2">
-            <span>+ Issue Certificate</span>
-          </Link>
-          <button onClick={() => { disconnectWallet(); router.push('/admin/login'); }} className="px-5 py-2.5 rounded-xl text-sm font-medium dark:text-slate-400 text-slate-500 border dark:border-white/10 border-slate-900/10 hover:dark:bg-white/5 bg-slate-900/5 hover:dark:text-white text-slate-900 transition-all">
-            Disconnect
-          </button>
-          {/* ⋮ Kebab menu — Super Admin only */}
-          {isSuperAdmin && (
-            <div className="relative" ref={menuRef}>
-              <button
-                onClick={() => setMenuOpen(o => !o)}
-                className="w-10 h-10 rounded-xl border dark:border-white/10 border-slate-900/10 dark:bg-white/5 bg-slate-900/5 hover:dark:bg-white/10 bg-slate-900/10 flex items-center justify-center dark:text-slate-400 text-slate-500 hover:dark:text-white text-slate-900 transition-all"
-                title="Admin Controls"
-              >
-                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-                  <circle cx="12" cy="5" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="12" cy="19" r="1.5"/>
-                </svg>
-              </button>
-              {menuOpen && (
-                <div className="absolute right-0 mt-2 w-52 glass rounded-xl border dark:border-white/10 border-slate-900/10 shadow-2xl z-50 overflow-hidden">
-                  <button
-                    onClick={() => { setModalMode('add'); setMenuOpen(false); }}
-                    className="w-full flex items-center gap-3 px-4 py-3 text-sm dark:text-slate-300 text-slate-700 hover:dark:bg-white/5 bg-slate-900/5 hover:dark:text-white text-slate-900 transition-all text-left"
-                  >
-                    <span className="text-green-400">➕</span>
-                    Add Admin
-                  </button>
-                  <button
-                    onClick={() => { setModalMode('remove'); setMenuOpen(false); }}
-                    className="w-full flex items-center gap-3 px-4 py-3 text-sm dark:text-slate-300 text-slate-700 hover:dark:bg-white/5 bg-slate-900/5 hover:text-red-400 transition-all text-left"
-                  >
-                    <span className="text-red-400">🗑️</span>
-                    Remove Admin
-                  </button>
-                </div>
-              )}
-            </div>
-          )}
-        </div>
-      </div>
 
       {/* Stats */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        {[
-          { label: isSuperAdmin ? 'Total (All Admins)' : 'Total Issued', value: totalCount, icon: '📜', color: 'from-blue-500/20 to-blue-600/10', border: 'border-blue-500/20' },
-          { label: 'Network', value: 'Sepolia', icon: '⛓️', color: 'from-violet-500/20 to-violet-600/10', border: 'border-violet-500/20' },
-          { label: 'Status', value: 'Active', icon: '✅', color: 'from-emerald-500/20 to-emerald-600/10', border: 'border-emerald-500/20' },
-        ].map((stat) => (
-          <div key={stat.label} className={`glass rounded-xl p-5 bg-gradient-to-br ${stat.color} border ${stat.border}`}>
-            <div className="text-2xl mb-2">{stat.icon}</div>
-            <div className="text-2xl font-bold dark:text-white text-slate-900">{loading && stat.label.includes('Total') ? '—' : stat.value}</div>
-            <div className="text-xs text-slate-500 mt-1 uppercase tracking-wider">{stat.label}</div>
-          </div>
-        ))}
+        <div className="glass rounded-xl p-5 bg-gradient-to-br from-blue-500/20 to-blue-600/10 border border-blue-500/20">
+          <div className="text-2xl mb-2">📜</div>
+          <div className="text-2xl font-bold dark:text-white text-slate-900">{loading ? '—' : stats.totalCertificates}</div>
+          <div className="text-xs text-slate-500 mt-1 uppercase tracking-wider">Total Issued</div>
+        </div>
+        <div className="glass rounded-xl p-5 bg-gradient-to-br from-violet-500/20 to-violet-600/10 border border-violet-500/20">
+          <div className="text-2xl mb-2">👥</div>
+          <div className="text-2xl font-bold dark:text-white text-slate-900">{loading ? '—' : stats.totalAdmins}</div>
+          <div className="text-xs text-slate-500 mt-1 uppercase tracking-wider">Active Admins</div>
+        </div>
+        <div className="glass rounded-xl p-5 bg-gradient-to-br from-emerald-500/20 to-emerald-600/10 border border-emerald-500/20">
+          <div className="text-2xl mb-2">📅</div>
+          <div className="text-2xl font-bold dark:text-white text-slate-900">{loading ? '—' : stats.todayCertificates}</div>
+          <div className="text-xs text-slate-500 mt-1 uppercase tracking-wider">Issued Today</div>
+        </div>
       </div>
 
       {/* History Table */}
@@ -355,45 +294,6 @@ export default function AdminDashboard() {
           </>
         )}
       </div>
-
-      {/* Add / Remove Admin Modal */}
-      {modalMode !== 'none' && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm" onClick={closeModal}>
-          <div className="glass rounded-2xl p-8 w-full max-w-md border dark:border-white/10 border-slate-900/10 shadow-2xl mx-4" onClick={e => e.stopPropagation()}>
-            <div className="flex items-center gap-3 mb-6">
-              <div className={`w-9 h-9 rounded-lg flex items-center justify-center text-xl ${modalMode === 'add' ? 'bg-green-500/10 border border-green-500/20' : 'bg-red-500/10 border border-red-500/20'}`}>
-                {modalMode === 'add' ? '➕' : '🗑️'}
-              </div>
-              <div>
-                <h3 className="text-lg font-bold dark:text-white text-slate-900">{modalMode === 'add' ? 'Add Admin' : 'Remove Admin'}</h3>
-                <p className="text-xs text-slate-500">{modalMode === 'add' ? 'Authorize a wallet to issue certificates' : 'Revoke a wallet\'s admin privileges'}</p>
-              </div>
-            </div>
-            <input
-              type="text"
-              placeholder="0x..."
-              value={adminAddress}
-              onChange={e => setAdminAddress(e.target.value)}
-              className="w-full input-dark px-4 py-3 rounded-xl text-sm font-mono dark:text-slate-300 text-slate-700 mb-4"
-            />
-            {txMessage.text && (
-              <div className={`mb-4 p-3 rounded-lg text-sm border ${txMessage.type === 'error' ? 'bg-red-500/10 border-red-500/20 text-red-400' : txMessage.type === 'success' ? 'bg-green-500/10 border-green-500/20 text-green-400' : 'bg-blue-500/10 border-blue-500/20 text-blue-400'}`}>
-                {txMessage.text}
-              </div>
-            )}
-            <div className="flex gap-3">
-              <button onClick={closeModal} className="flex-1 px-4 py-2.5 rounded-xl text-sm font-medium dark:text-slate-400 text-slate-500 border dark:border-white/10 border-slate-900/10 hover:dark:bg-white/5 bg-slate-900/5 hover:dark:text-white text-slate-900 transition-all">Cancel</button>
-              <button
-                onClick={() => handleAdminAction(modalMode as 'add' | 'remove')}
-                disabled={txLoading || !adminAddress}
-                className={`flex-1 px-4 py-2.5 rounded-xl text-sm font-bold dark:text-white text-slate-900 transition-all disabled:opacity-50 ${modalMode === 'add' ? 'bg-green-600 hover:bg-green-500' : 'bg-red-600 hover:bg-red-500'}`}
-              >
-                {txLoading ? 'Processing...' : modalMode === 'add' ? 'Add Admin' : 'Remove Admin'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
